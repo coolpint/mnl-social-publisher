@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "export_kind": "mnl/social-export-batch",
+  "exported_at": "2026-03-14T00:00:00+00:00",
+  "relative_dir": "2026/03/14/run-000123",
+  "status_contract": {
+    "root_dir": "social/status",
+    "relative_dir": "2026/03/14/run-000123",
+    "batch_path_template": "social/status/{platform}/2026/03/14/run-000123/batch.json",
+    "article_path_template": "social/status/{platform}/2026/03/14/run-000123/article-{idxno:06d}.json",
+    "allowed_states": [
+      "received",
+      "building",
+      "built",
+      "review_required",
+      "approved",
+      "publishing",
+      "published",
+      "blocked",
+      "failed",
+      "skipped"
+    ],
+    "terminal_states": [
+      "published",
+      "blocked",
+      "failed",
+      "skipped"
+    ]
+  },
+  "run": {
+    "id": 123,
+    "mode": "daily",
+    "started_at": "2026-03-14T08:55:00+09:00",
+    "finished_at": "2026-03-14T09:00:00+09:00",
+    "discovered_count": 1,
+    "fetched_count": 1,
+    "updated_count": 1
+  },
+  "article_count": 1,
+  "packages": [
+    {
+      "article_idxno": 143,
+      "headline": "플랫폼 규제 점검 강화, 기업 대응 포인트는",
+      "change_type": "created",
+      "package_dir": "article-000143",
+      "package_path": "article-000143/package.json",
+      "article_json_path": "article-000143/article.json",
+      "rights_path": "article-000143/rights.json",
+      "asset_count": 1
+    }
+  ]
+}

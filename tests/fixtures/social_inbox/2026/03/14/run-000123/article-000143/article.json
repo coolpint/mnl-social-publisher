@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "article": {
+    "idxno": 143,
+    "source_url": "https://www.moneynlaw.example/news/articleView.html?idxno=143",
+    "canonical_url": "https://www.moneynlaw.example/articles/court-platform-compliance",
+    "site_name": "Money & Law",
+    "language": "ko",
+    "headline": "플랫폼 규제 점검 강화, 기업 대응 포인트는",
+    "browser_title": "플랫폼 규제 점검 강화, 기업 대응 포인트는 - 머니앤로",
+    "summary": "당국의 점검 강화 움직임에 따라 기업의 내부 통제와 공시 대응이 중요해졌습니다.",
+    "section_name": "정책",
+    "subsection_name": "플랫폼",
+    "author_name": "머니앤로 편집부",
+    "author_email": "",
+    "author_profile_url": "",
+    "published_at": "2026-03-14T08:30:00+09:00",
+    "updated_at": "2026-03-14T08:45:00+09:00",
+    "status": "published",
+    "body_html": "<p>당국은 플랫폼 사업자에 대한 점검 범위를 넓히고 있습니다.</p><p>기업은 광고 표시와 약관 운영, 소비자 보호 절차를 다시 살펴야 합니다.</p><p>법무와 대외협력, 서비스 운영 부서의 공조가 필요하다는 분석도 나옵니다.</p>",
+    "body_text": "당국은 플랫폼 사업자에 대한 점검 범위를 넓히고 있습니다. 기업은 광고 표시와 약관 운영, 소비자 보호 절차를 다시 살펴야 합니다. 법무와 대외협력, 서비스 운영 부서의 공조가 필요하다는 분석도 나옵니다.",
+    "copyright_notice": "Copyright 2026. Money & Law. All rights reserved.",
+    "html_sha256": "htmlsha",
+    "body_sha256": "bodysha",
+    "fetched_at": "2026-03-14T09:00:00+09:00",
+    "first_seen_at": "2026-03-14T08:55:00+09:00",
+    "last_seen_at": "2026-03-14T09:00:00+09:00",
+    "change_type": "created",
+    "archive_paths": {
+      "xml_path": "articles/2026/03/14/article-000143.xml",
+      "source_html_path": "html/2026/03/14/article-000143.html"
+    }
+  },
+  "assets": [
+    {
+      "ordinal": 1,
+      "role": "image",
+      "source_url": "https://cdn.moneynlaw.example/news/photo/202603/143_01.jpg",
+      "local_path": "media/2026/03/14/143_01.jpg",
+      "packaged_path": "assets/source-media/01.jpg",
+      "mime_type": "image/jpeg",
+      "width": 1080,
+      "height": 1080,
+      "alt_text": "플랫폼 규제 그래픽",
+      "caption": "기사 대표 이미지",
+      "sha256": "imagesha"
+    }
+  ],
+  "source_files": {
+    "article_xml": "article.xml",
+    "source_html": "source.html",
+    "assets_dir": "assets/source-media"
+  },
+  "editorial_signals": {
+    "body_character_count": 107,
+    "summary_present": true,
+    "image_count": 1,
+    "needs_human_editorial_review": true,
+    "default_publish_policy": "manual_approval_only"
+  }
+}
+

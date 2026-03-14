@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "status": "needs_review",
+  "article_idxno": 143,
+  "article_text": {
+    "source": "moneynlaw_canonical_archive",
+    "copyright_notice": "Copyright 2026. Money & Law. All rights reserved.",
+    "transformation_required": true,
+    "notes": [
+      "Publishers must transform article content for each platform instead of reposting the article verbatim."
+    ]
+  },
+  "media": [
+    {
+      "ordinal": 1,
+      "role": "image",
+      "source_url": "https://cdn.moneynlaw.example/news/photo/202603/143_01.jpg",
+      "packaged_path": "assets/source-media/01.jpg",
+      "license_type": "unknown",
+      "social_use_allowed": false,
+      "credit_text": "",
+      "review_required": true
+    }
+  ],
+  "music": {
+    "status": "not_attached",
+    "license_required": true,
+    "review_required": true
+  }
+}
+

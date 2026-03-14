@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "export_kind": "mnl/social-package",
+  "exported_at": "2026-03-14T00:00:00+00:00",
+  "run": {
+    "id": 123,
+    "mode": "daily",
+    "change_type": "created"
+  },
+  "article": {
+    "idxno": 143,
+    "headline": "플랫폼 규제 점검 강화, 기업 대응 포인트는",
+    "section_name": "정책",
+    "subsection_name": "플랫폼",
+    "author_name": "머니앤로 편집부",
+    "published_at": "2026-03-14T08:30:00+09:00",
+    "canonical_url": "https://www.moneynlaw.example/articles/court-platform-compliance"
+  },
+  "files": {
+    "article_json": "article.json",
+    "article_xml": "article.xml",
+    "source_html": "source.html",
+    "body_text": "body.txt",
+    "rights": "rights.json"
+  },
+  "assets": {
+    "count": 1,
+    "has_local_media": true,
+    "directory": "assets/source-media"
+  },
+  "status_contract": {
+    "root_dir": "social/status",
+    "relative_dir": "2026/03/14/run-000123",
+    "batch_path_template": "social/status/{platform}/2026/03/14/run-000123/batch.json",
+    "article_path_template": "social/status/{platform}/2026/03/14/run-000123/article-{idxno:06d}.json",
+    "allowed_states": [
+      "received",
+      "building",
+      "built",
+      "review_required",
+      "approved",
+      "publishing",
+      "published",
+      "blocked",
+      "failed",
+      "skipped"
+    ],
+    "terminal_states": [
+      "published",
+      "blocked",
+      "failed",
+      "skipped"
+    ]
+  },
+  "platforms": {
+    "youtube_shorts": {
+      "builder": "youtube_shorts_builder",
+      "publisher": "youtube_publisher",
+      "content_kind": "vertical_video",
+      "delivery_mode": "private_review",
+      "review_required": true,
+      "status": "pending",
+      "status_paths": {
+        "batch": "social/status/youtube_shorts/2026/03/14/run-000123/batch.json",
+        "article": "social/status/youtube_shorts/2026/03/14/run-000123/article-000143.json"
+      }
+    },
+    "instagram": {
+      "builder": "instagram_builder",
+      "publisher": "instagram_publisher",
+      "content_kind": "platform_specific",
+      "delivery_mode": "review_required",
+      "review_required": true,
+      "status": "pending",
+      "status_paths": {
+        "batch": "social/status/instagram/2026/03/14/run-000123/batch.json",
+        "article": "social/status/instagram/2026/03/14/run-000123/article-000143.json"
+      }
+    },
+    "facebook": {
+      "builder": "facebook_builder",
+      "publisher": "facebook_publisher",
+      "content_kind": "platform_specific",
+      "delivery_mode": "review_required",
+      "review_required": true,
+      "status": "pending",
+      "status_paths": {
+        "batch": "social/status/facebook/2026/03/14/run-000123/batch.json",
+        "article": "social/status/facebook/2026/03/14/run-000123/article-000143.json"
+      }
+    },
+    "threads": {
+      "builder": "threads_builder",
+      "publisher": "threads_publisher",
+      "content_kind": "text_first",
+      "delivery_mode": "review_required",
+      "review_required": true,
+      "status": "pending",
+      "status_paths": {
+        "batch": "social/status/threads/2026/03/14/run-000123/batch.json",
+        "article": "social/status/threads/2026/03/14/run-000123/article-000143.json"
+      }
+    }
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "approval_kind": "mnl/social-approval",
+  "package_id": "article-000143",
+  "article_idxno": 143,
+  "decided_at": "2026-03-14T10:05:00+09:00",
+  "decided_by": "editor@example.com",
+  "platforms": {
+    "threads": {
+      "approved": true,
+      "decided_at": "2026-03-14T10:05:00+09:00",
+      "decided_by": "editor@example.com",
+      "note": "배포 가능"
+    },
+    "x": {
+      "approved": true,
+      "decided_at": "2026-03-14T10:06:00+09:00",
+      "decided_by": "editor@example.com",
+      "note": "짧은 문안으로 배포"
+    },
+    "facebook": {
+      "approved": false,
+      "decided_at": "2026-03-14T10:07:00+09:00",
+      "decided_by": "editor@example.com",
+      "note": "톤 조정 필요"
+    }
+  },
+  "notes": [
+    "초기 승인 테스트 fixture"
+  ]
+}

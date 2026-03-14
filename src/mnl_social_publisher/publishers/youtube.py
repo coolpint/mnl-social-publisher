@@ -1,0 +1,34 @@
+from __future__ import annotations
+
+from ..models import PublishJob, PublishRequest
+
+
+def build_youtube_publish_request(
+    draft: dict,
+    job: PublishJob,
+    created_at: str,
+) -> PublishRequest:
+    payload = {
+        "title": draft["title"],
+        "description": draft["description"],
+        "privacy_status": draft["privacy_status"],
+        "tags": draft["tags"],
+        "script_lines": draft["script_lines"],
+        "visuals_mode": draft["visuals_mode"],
+        "approved_asset_paths": draft["approved_asset_paths"],
+    }
+    return PublishRequest(
+        schema_version=1,
+        request_kind="mnl/youtube-publish-request",
+        platform="youtube_shorts",
+        package_id=job.package_id,
+        article_idxno=job.article_idxno,
+        headline=job.headline,
+        publisher=job.publisher,
+        delivery_mode=job.delivery_mode,
+        created_at=created_at,
+        review_draft_path=job.review_draft_path,
+        approval_path=job.approval_path,
+        source_canonical_url=job.source_canonical_url,
+        payload=payload,
+    )

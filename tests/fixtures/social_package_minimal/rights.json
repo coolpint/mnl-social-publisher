@@ -1,0 +1,10 @@
+{
+  "social_usage_allowed": true,
+  "image_usage_allowed": false,
+  "approved_asset_paths": [],
+  "credit_text": "Money & Law",
+  "restrictions": ["No third-party music"],
+  "sensitive_topic": false,
+  "review_required": true
+}
+
