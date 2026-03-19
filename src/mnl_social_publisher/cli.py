@@ -19,7 +19,7 @@ from .package_loader import (
 from .platforms import supported_platforms
 from .publishers.requests import create_publish_requests
 from .publishers.status import prepare_publish_batch
-from .review_builds import build_review_batch, build_youtube_review_batch
+from .review_builds import build_review_all_batch, build_review_batch, build_youtube_review_batch
 from .settings import Settings
 
 
@@ -74,6 +74,17 @@ def _build_parser() -> argparse.ArgumentParser:
     build_review_notification_parser.add_argument("--inbox-root", type=Path)
     build_review_notification_parser.add_argument("--output-root", type=Path)
     build_review_notification_parser.add_argument("--pretty", action="store_true")
+
+    build_review_all_batch_parser = subparsers.add_parser("build-review-all-batch")
+    build_review_all_batch_parser.add_argument("batch_dir", type=Path)
+    build_review_all_batch_parser.add_argument("--output-root", type=Path)
+    build_review_all_batch_parser.add_argument("--pretty", action="store_true")
+
+    build_review_all_notification_parser = subparsers.add_parser("build-review-all-notification")
+    build_review_all_notification_parser.add_argument("notification_path", type=Path)
+    build_review_all_notification_parser.add_argument("--inbox-root", type=Path)
+    build_review_all_notification_parser.add_argument("--output-root", type=Path)
+    build_review_all_notification_parser.add_argument("--pretty", action="store_true")
 
     prepare_publish_batch_parser = subparsers.add_parser("prepare-publish-batch")
     prepare_publish_batch_parser.add_argument("platform", choices=supported_platforms())
@@ -211,6 +222,17 @@ def main(argv: list[str] | None = None) -> int:
             print(_dump_json(summary, pretty=args.pretty))
         return 0
 
+    if args.command == "build-review-all-batch":
+        batch = load_batch(args.batch_dir)
+        summary = build_review_all_batch(
+            batch,
+            output_root=args.output_root or settings.review_root,
+            pretty=args.pretty,
+        )
+        if args.output_root is None and settings.review_root is None:
+            print(_dump_json(summary, pretty=args.pretty))
+        return 0
+
     if args.command == "build-youtube-notification":
         inbox_root = args.inbox_root or settings.inbox_root
         if inbox_root is None:
@@ -237,6 +259,23 @@ def main(argv: list[str] | None = None) -> int:
         batch = load_batch_from_notification(args.notification_path, inbox_root)
         summary = build_review_batch(
             args.platform,
+            batch,
+            output_root=args.output_root or settings.review_root,
+            pretty=args.pretty,
+            source_notification=notification,
+        )
+        if args.output_root is None and settings.review_root is None:
+            print(_dump_json(summary, pretty=args.pretty))
+        return 0
+
+    if args.command == "build-review-all-notification":
+        inbox_root = args.inbox_root or settings.inbox_root
+        if inbox_root is None:
+            print("build-review-all-notification requires --inbox-root or MNL_SOCIAL_INBOX_ROOT")
+            return 2
+        notification = load_notification(args.notification_path)
+        batch = load_batch_from_notification(args.notification_path, inbox_root)
+        summary = build_review_all_batch(
             batch,
             output_root=args.output_root or settings.review_root,
             pretty=args.pretty,

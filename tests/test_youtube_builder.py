@@ -4,7 +4,7 @@ import unittest
 
 from mnl_social_publisher.builders.youtube import build_youtube_draft
 from mnl_social_publisher.package_loader import load_batch, load_package
-from mnl_social_publisher.review_builds import build_youtube_review_batch
+from mnl_social_publisher.review_builds import build_review_all_batch, build_youtube_review_batch
 
 
 FIXTURE_BATCH_DIR = (
@@ -44,9 +44,15 @@ class YouTubeBuilderTestCase(unittest.TestCase):
 
             output_root = Path(tmp_dir) / "2026" / "03" / "14" / "run-000123"
             draft_path = output_root / "article-000143" / "youtube_draft.json"
+            title_path = output_root / "article-000143" / "youtube_title.txt"
+            description_path = output_root / "article-000143" / "youtube_description.txt"
+            script_path = output_root / "article-000143" / "youtube_script.txt"
             summary_path = output_root / "youtube_build.json"
 
             self.assertTrue(draft_path.exists())
+            self.assertTrue(title_path.exists())
+            self.assertTrue(description_path.exists())
+            self.assertTrue(script_path.exists())
             self.assertTrue(summary_path.exists())
             self.assertEqual(summary["article_count"], 1)
             self.assertEqual(summary["drafts"][0]["status"], "built")
@@ -54,6 +60,22 @@ class YouTubeBuilderTestCase(unittest.TestCase):
                 summary["drafts"][0]["output_path"],
                 "2026/03/14/run-000123/article-000143/youtube_draft.json",
             )
+            self.assertIn(
+                "2026/03/14/run-000123/article-000143/youtube_script.txt",
+                summary["drafts"][0]["artifact_paths"],
+            )
+
+    def test_build_review_all_batch_writes_platform_summary(self) -> None:
+        batch = load_batch(FIXTURE_BATCH_DIR)
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            summary = build_review_all_batch(batch, output_root=tmp_dir, pretty=True)
+
+            output_root = Path(tmp_dir) / "2026" / "03" / "14" / "run-000123"
+            self.assertTrue((output_root / "all_review_build.json").exists())
+            self.assertTrue((output_root / "article-000143" / "threads_post.txt").exists())
+            self.assertTrue((output_root / "article-000143" / "x_post.txt").exists())
+            self.assertEqual(summary["platform_count"], 5)
 
 
 if __name__ == "__main__":

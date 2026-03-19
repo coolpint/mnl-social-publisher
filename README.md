@@ -96,6 +96,16 @@ mnl-social-publisher build-review-batch \
   --pretty
 ```
 
+Build every platform review artifact in one run:
+
+```bash
+mnl-social-publisher build-review-all-notification \
+  tests/fixtures/social_notifications/latest.json \
+  --inbox-root tests/fixtures/social_inbox \
+  --output-root /path/to/social/review \
+  --pretty
+```
+
 Build YouTube drafts from a notification:
 
 ```bash

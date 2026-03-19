@@ -65,7 +65,9 @@ class PlatformDraftAndPublisherTestCase(unittest.TestCase):
             self.assertTrue((output_root / "threads_build.json").exists())
             self.assertTrue((output_root / "x_build.json").exists())
             self.assertTrue((output_root / "article-000143" / "threads_draft.json").exists())
+            self.assertTrue((output_root / "article-000143" / "threads_post.txt").exists())
             self.assertTrue((output_root / "article-000143" / "x_draft.json").exists())
+            self.assertTrue((output_root / "article-000143" / "x_post.txt").exists())
             self.assertEqual(threads_summary["drafts"][0]["status"], "built")
             self.assertEqual(x_summary["drafts"][0]["status"], "built")
 

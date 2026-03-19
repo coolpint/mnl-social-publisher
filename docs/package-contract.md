@@ -148,10 +148,17 @@ social/review/YYYY/MM/DD/run-000123/
   instagram_build.json
   article-000143/
     youtube_draft.json
+    youtube_title.txt
+    youtube_description.txt
+    youtube_script.txt
     threads_draft.json
+    threads_post.txt
     x_draft.json
+    x_post.txt
     facebook_draft.json
+    facebook_post.txt
     instagram_draft.json
+    instagram_caption.txt
 ```
 
 Example approval target:
@@ -192,7 +199,7 @@ Example status target:
 
 ```text
 social/status/threads/YYYY/MM/DD/run-000123/
-  publish_batch.json
+  batch.json
   article-000143.json
 ```
 
