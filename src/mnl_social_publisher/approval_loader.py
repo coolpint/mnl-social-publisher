@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 import json
 from pathlib import Path
 
@@ -18,6 +19,10 @@ APPROVAL_REQUIRED_FIELDS = {
 def _read_json(path: Path) -> dict:
     with path.open("r", encoding="utf-8") as handle:
         return json.load(handle)
+
+
+def _utcnow_seconds() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
 def _missing_fields(payload: dict, required_fields: set[str]) -> list[str]:
@@ -122,3 +127,50 @@ def approval_for_package(
     if not approval_path.exists():
         return None
     return load_approval(approval_path)
+
+
+def save_approval_decision(
+    *,
+    approval_root: str | Path,
+    relative_dir: str,
+    package_id: str,
+    article_idxno: int,
+    platform: str,
+    approved: bool,
+    decided_by: str,
+    note: str,
+) -> Path:
+    approval_path = resolve_approval_path(approval_root, relative_dir, package_id)
+    if approval_path.exists():
+        payload = _read_json(approval_path)
+    else:
+        payload = {
+            "schema_version": 1,
+            "approval_kind": "mnl/social-approval",
+            "package_id": package_id,
+            "article_idxno": int(article_idxno),
+            "platforms": {},
+            "notes": [],
+        }
+
+    decided_at = _utcnow_seconds()
+    payload["schema_version"] = 1
+    payload["approval_kind"] = "mnl/social-approval"
+    payload["package_id"] = package_id
+    payload["article_idxno"] = int(article_idxno)
+    payload["decided_at"] = decided_at
+    payload["decided_by"] = decided_by
+    platforms = payload.setdefault("platforms", {})
+    platforms[platform] = {
+        "approved": bool(approved),
+        "decided_at": decided_at,
+        "decided_by": decided_by,
+        "note": note,
+    }
+
+    approval_path.parent.mkdir(parents=True, exist_ok=True)
+    approval_path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return approval_path

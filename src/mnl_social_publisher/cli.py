@@ -21,6 +21,7 @@ from .publishers.requests import create_publish_requests
 from .publishers.status import prepare_publish_batch
 from .review_builds import build_review_all_batch, build_review_batch, build_youtube_review_batch
 from .settings import Settings
+from .web_app import serve_web_app
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -39,6 +40,10 @@ def _build_parser() -> argparse.ArgumentParser:
 
     validate_approval_parser = subparsers.add_parser("validate-approval")
     validate_approval_parser.add_argument("approval_path", type=Path)
+
+    serve_web_parser = subparsers.add_parser("serve-web")
+    serve_web_parser.add_argument("--host", default="127.0.0.1")
+    serve_web_parser.add_argument("--port", type=int, default=8420)
 
     youtube_parser = subparsers.add_parser("build-youtube")
     youtube_parser.add_argument("package_dir", type=Path)
@@ -185,6 +190,10 @@ def main(argv: list[str] | None = None) -> int:
                 print(error)
             return 1
         print("Approval is valid")
+        return 0
+
+    if args.command == "serve-web":
+        serve_web_app(settings, host=args.host, port=args.port)
         return 0
 
     if args.command == "build-youtube":

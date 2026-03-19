@@ -139,3 +139,14 @@ mnl-social-publisher create-publish-requests-batch \
   --status-root /path/to/social/status \
   --pretty
 ```
+
+Run the browser UI locally:
+
+```bash
+MNL_SOCIAL_INBOX_ROOT=/path/to/social/inbox \
+MNL_SOCIAL_REVIEW_ROOT=/path/to/social/review \
+MNL_SOCIAL_APPROVAL_ROOT=/path/to/social/approval \
+MNL_SOCIAL_OUTBOX_ROOT=/path/to/social/outbox \
+MNL_SOCIAL_STATUS_ROOT=/path/to/social/status \
+mnl-social-publisher serve-web --host 127.0.0.1 --port 8420
+```
