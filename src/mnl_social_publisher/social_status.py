@@ -45,10 +45,19 @@ def build_article_status_path(platform: str, relative_dir: str, article_idxno: i
 
 
 def local_status_path(status_root: str | Path, contract_path: str) -> Path:
+    return Path(rooted_status_path(str(status_root), contract_path))
+
+
+def rooted_status_path(status_root: str, contract_path: str) -> str:
     contract_prefix = f"{STATUS_ROOT}/"
     if contract_path.startswith(contract_prefix):
-        return Path(status_root) / contract_path[len(contract_prefix) :]
-    return Path(status_root) / contract_path
+        suffix = contract_path[len(contract_prefix) :]
+    else:
+        suffix = contract_path
+    cleaned_root = str(status_root).rstrip("/")
+    if not cleaned_root:
+        return suffix
+    return f"{cleaned_root}/{suffix.lstrip('/')}"
 
 
 def build_batch_status_payload(

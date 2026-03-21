@@ -1,19 +1,13 @@
 from __future__ import annotations
 
 from html import escape
-import json
-from pathlib import Path
 from urllib.parse import parse_qs, urlencode
 from wsgiref.simple_server import make_server
 
-from .approval_loader import approval_for_package, save_approval_decision
-from .package_loader import load_batch, load_package
 from .platforms import supported_platforms
-from .publishers.requests import create_publish_requests
 from .review_artifacts import artifact_filenames
-from .review_builds import build_review_all_batch
 from .settings import Settings
-from .social_status import build_article_status_path, build_batch_status_path, local_status_path
+from .workspace import BaseWorkspace, WorkspaceError, workspace_from_settings
 
 
 APP_CSS = """
@@ -210,13 +204,14 @@ def serve_web_app(settings: Settings, host: str = "127.0.0.1", port: int = 8420)
         server.serve_forever()
 
 
-def create_web_app(settings: Settings):
-    return SocialDeskApp(settings)
+def create_web_app(settings: Settings, workspace: BaseWorkspace | None = None):
+    return SocialDeskApp(settings, workspace or workspace_from_settings(settings))
 
 
 class SocialDeskApp:
-    def __init__(self, settings: Settings) -> None:
+    def __init__(self, settings: Settings, workspace: BaseWorkspace) -> None:
         self.settings = settings
+        self.workspace = workspace
 
     def __call__(self, environ, start_response):
         method = environ.get("REQUEST_METHOD", "GET").upper()
@@ -312,12 +307,8 @@ class SocialDeskApp:
     def _dashboard_page(self, environ) -> str:
         query = self._query(environ)
         flash = query.get("flash", "")
-        if self.settings.inbox_root is None:
-            body = "<div class='panel span-12'><h2>Missing Inbox Root</h2><p>`MNL_SOCIAL_INBOX_ROOT`를 설정하면 대시보드가 실제 batch를 읽을 수 있습니다.</p></div>"
-            return self._layout("Dashboard", body, flash=flash)
-
         batch_cards = []
-        for batch in self._recent_batches(self.settings.inbox_root):
+        for batch in self.workspace.list_recent_batches():
             batch_cards.append(self._batch_card(batch))
 
         if not batch_cards:
@@ -331,7 +322,7 @@ class SocialDeskApp:
         query = self._query(environ)
         relative_dir = query.get("relative_dir", "")
         flash = query.get("flash", "")
-        batch = self._load_batch_from_relative_dir(relative_dir)
+        batch = self.workspace.load_batch(relative_dir)
         cards = [
             self._batch_header_card(batch),
             self._batch_articles_table(batch),
@@ -344,8 +335,8 @@ class SocialDeskApp:
         relative_dir = query.get("relative_dir", "")
         package_id = query.get("package_id", "")
         flash = query.get("flash", "")
-        batch = self._load_batch_from_relative_dir(relative_dir)
-        package = load_package(batch.batch_dir / package_id)
+        batch = self.workspace.load_batch(relative_dir)
+        package = self.workspace.load_package(relative_dir, package_id)
 
         body = [
             f"""
@@ -370,30 +361,10 @@ class SocialDeskApp:
             body.append(self._platform_review_card(batch, package_id, platform))
         return self._layout(package.article.headline, "".join(body), current="article", flash=flash)
 
-    def _recent_batches(self, inbox_root: Path) -> list:
-        batch_dirs = sorted(
-            {path.parent for path in inbox_root.rglob("batch.json")},
-            key=lambda path: path.as_posix(),
-            reverse=True,
-        )
-        batches = []
-        for batch_dir in batch_dirs[:24]:
-            try:
-                batches.append(load_batch(batch_dir))
-            except Exception:
-                continue
-        return batches
-
     def _config_panel(self) -> str:
         rows = []
-        for label, value in (
-            ("Inbox", self.settings.inbox_root),
-            ("Review", self.settings.review_root),
-            ("Approval", self.settings.approval_root),
-            ("Outbox", self.settings.outbox_root),
-            ("Status", self.settings.status_root),
-        ):
-            rows.append(f"<span class='chip'>{escape(label)}: {escape(str(value) if value else 'not set')}</span>")
+        for label, value in self.workspace.describe_roots():
+            rows.append(f"<span class='chip'>{escape(label)}: {escape(value or 'not set')}</span>")
         return f"""
         <div class="panel span-12">
           <div class="eyebrow">Active Roots</div>
@@ -407,7 +378,7 @@ class SocialDeskApp:
         action_forms = [
             f'<a class="button primary" href="/batch?{params}">Open Batch</a>'
         ]
-        if self.settings.review_root is not None:
+        if self.workspace.has_review_root:
             action_forms.append(
                 f"""
                 <form class="inline" method="post" action="/actions/build-review-all">
@@ -434,7 +405,7 @@ class SocialDeskApp:
 
     def _batch_header_card(self, batch) -> str:
         action_forms = []
-        if self.settings.review_root is not None:
+        if self.workspace.has_review_root:
             action_forms.append(
                 f"""
                 <form class="inline" method="post" action="/actions/build-review-all">
@@ -444,7 +415,7 @@ class SocialDeskApp:
                 """
             )
         for platform in supported_platforms():
-            if self.settings.review_root is None or self.settings.outbox_root is None:
+            if not self.workspace.has_review_root or not self.workspace.has_outbox_root:
                 continue
             action_forms.append(
                 f"""
@@ -475,7 +446,7 @@ class SocialDeskApp:
     def _batch_articles_table(self, batch) -> str:
         rows = []
         for package_ref in batch.packages:
-            package = load_package(batch.batch_dir / package_ref.package_dir)
+            package = self.workspace.load_package(batch.relative_dir, package_ref.package_dir)
             params = urlencode({"relative_dir": batch.relative_dir, "package_id": package.package_id})
             status_chips = "".join(
                 self._status_chip_for_batch_article(batch, package, platform)
@@ -512,7 +483,7 @@ class SocialDeskApp:
     def _batch_status_panel(self, batch) -> str:
         items = []
         for platform in supported_platforms():
-            status_payload = self._read_batch_status(batch, platform)
+            status_payload = self.workspace.read_batch_status(batch, platform)
             if status_payload is None:
                 items.append(f"<div class='chip warn'>{escape(platform)}: no status yet</div>")
             else:
@@ -541,20 +512,18 @@ class SocialDeskApp:
         """
 
     def _platform_review_card(self, batch, package_id: str, platform: str) -> str:
-        package = load_package(batch.batch_dir / package_id)
-        artifact_dir = None if self.settings.review_root is None else self.settings.review_root / batch.relative_dir / package_id
-        approval = approval_for_package(package, batch.relative_dir, self.settings.approval_root)
-        decision = None if approval is None else approval.platforms.get(platform)
-        status_payload = self._read_article_status(batch, package, platform)
+        package = self.workspace.load_package(batch.relative_dir, package_id)
+        approval_payload = self.workspace.read_approval(batch.relative_dir, package.package_id)
+        decision = None if approval_payload is None else approval_payload.get("platforms", {}).get(platform)
+        status_payload = self.workspace.read_article_status(batch, package, platform)
 
         draft_preview_blocks = []
-        if artifact_dir is not None:
-            for artifact_name in artifact_filenames(platform):
-                path = artifact_dir / artifact_name
-                if path.exists():
-                    draft_preview_blocks.append(
-                        f"<div class='stack'><div class='chip'>{escape(artifact_name)}</div><pre>{escape(path.read_text(encoding='utf-8'))}</pre></div>"
-                    )
+        for artifact_name in artifact_filenames(platform):
+            artifact_text = self.workspace.read_review_artifact(batch.relative_dir, package.package_id, artifact_name)
+            if artifact_text is not None:
+                draft_preview_blocks.append(
+                    f"<div class='stack'><div class='chip'>{escape(artifact_name)}</div><pre>{escape(artifact_text)}</pre></div>"
+                )
 
         if not draft_preview_blocks:
             draft_preview_blocks.append("<div class='empty'>아직 review artifact가 없습니다.</div>")
@@ -562,14 +531,14 @@ class SocialDeskApp:
         approval_markup = "<div class='chip warn'>no approval yet</div>"
         if decision is not None:
             approval_markup = (
-                f"<div class='chip {'good' if decision.approved else 'blocked'}'>{escape('approved' if decision.approved else 'rejected')} by {escape(decision.decided_by or 'unknown')}</div>"
+                f"<div class='chip {'good' if decision.get('approved') else 'blocked'}'>{escape('approved' if decision.get('approved') else 'rejected')} by {escape(str(decision.get('decided_by') or 'unknown'))}</div>"
             )
         status_markup = ""
         if status_payload is not None:
             status_markup = f"<div class='chip'>{escape(status_payload.get('state', 'unknown'))}</div>"
 
         form_markup = ""
-        if self.settings.approval_root is not None:
+        if self.workspace.has_approval_root:
             form_markup = f"""
             <form class="stack" method="post" action="/actions/approve">
               <input type="hidden" name="relative_dir" value="{escape(batch.relative_dir)}">
@@ -601,7 +570,7 @@ class SocialDeskApp:
         """
 
     def _status_chip_for_batch_article(self, batch, package, platform: str) -> str:
-        status_payload = self._read_article_status(batch, package, platform)
+        status_payload = self.workspace.read_article_status(batch, package, platform)
         if status_payload is None:
             return f"<span class='chip'>{escape(platform)}: idle</span>"
         state = str(status_payload.get("state") or "unknown")
@@ -614,46 +583,12 @@ class SocialDeskApp:
             cls += " warn"
         return f"<span class='{cls}'>{escape(platform)}: {escape(state)}</span>"
 
-    def _read_batch_status(self, batch, platform: str) -> dict | None:
-        if self.settings.status_root is None:
-            return None
-        contract_path = str(
-            batch.status_contract.get("batch_path_template")
-            or build_batch_status_path(platform, batch.relative_dir)
-        ).format(platform=platform)
-        local_path = local_status_path(self.settings.status_root, contract_path)
-        if not local_path.exists():
-            return None
-        return json.loads(local_path.read_text(encoding="utf-8"))
-
-    def _read_article_status(self, batch, package, platform: str) -> dict | None:
-        if self.settings.status_root is None:
-            return None
-        target = package.platforms.get(platform)
-        contract_path = "" if target is None else target.status_article_path
-        if not contract_path:
-            template = str(
-                batch.status_contract.get("article_path_template")
-                or build_article_status_path(platform, batch.relative_dir, package.article.idxno)
-            )
-            contract_path = template.format(platform=platform, idxno=package.article.idxno)
-        local_path = local_status_path(self.settings.status_root, contract_path)
-        if not local_path.exists():
-            return None
-        return json.loads(local_path.read_text(encoding="utf-8"))
-
-    def _load_batch_from_relative_dir(self, relative_dir: str):
-        if self.settings.inbox_root is None:
-            raise ValueError("Inbox root is not configured")
-        return load_batch(self.settings.inbox_root / relative_dir)
-
     def _handle_build_review_all(self, environ, start_response):
         form = self._post(environ)
         relative_dir = form.get("relative_dir", "")
-        if self.settings.review_root is None:
+        if not self.workspace.has_review_root:
             return self._redirect(start_response, f"/batch?{urlencode({'relative_dir': relative_dir, 'flash': 'Review root is not configured.'})}")
-        batch = self._load_batch_from_relative_dir(relative_dir)
-        summary = build_review_all_batch(batch, output_root=self.settings.review_root, pretty=True)
+        summary = self.workspace.build_review_all(relative_dir)
         message = f"Built review artifacts for {summary['platform_count']} platforms."
         return self._redirect(start_response, f"/batch?{urlencode({'relative_dir': relative_dir, 'flash': message})}")
 
@@ -666,10 +601,9 @@ class SocialDeskApp:
         decision = form.get("decision", "")
         decided_by = form.get("decided_by", "").strip() or "operator"
         note = form.get("note", "").strip()
-        if self.settings.approval_root is None:
+        if not self.workspace.has_approval_root:
             return self._redirect(start_response, f"/article?{urlencode({'relative_dir': relative_dir, 'package_id': package_id, 'flash': 'Approval root is not configured.'})}")
-        save_approval_decision(
-            approval_root=self.settings.approval_root,
+        self.workspace.save_approval(
             relative_dir=relative_dir,
             package_id=package_id,
             article_idxno=article_idxno,
@@ -685,17 +619,8 @@ class SocialDeskApp:
         form = self._post(environ)
         relative_dir = form.get("relative_dir", "")
         platform = form.get("platform", "")
-        if self.settings.review_root is None or self.settings.outbox_root is None:
+        if not self.workspace.has_review_root or not self.workspace.has_outbox_root:
             return self._redirect(start_response, f"/batch?{urlencode({'relative_dir': relative_dir, 'flash': 'Review root or outbox root is not configured.'})}")
-        batch = self._load_batch_from_relative_dir(relative_dir)
-        summary = create_publish_requests(
-            platform,
-            batch,
-            review_root=self.settings.review_root,
-            approval_root=self.settings.approval_root,
-            outbox_root=self.settings.outbox_root,
-            status_root=self.settings.status_root,
-            pretty=True,
-        )
+        summary = self.workspace.create_publish_requests(relative_dir, platform)
         message = f"{platform}: queued {summary['request_count']} publish request(s)."
         return self._redirect(start_response, f"/batch?{urlencode({'relative_dir': relative_dir, 'flash': message})}")

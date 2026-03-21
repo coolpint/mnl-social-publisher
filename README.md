@@ -150,3 +150,21 @@ MNL_SOCIAL_OUTBOX_ROOT=/path/to/social/outbox \
 MNL_SOCIAL_STATUS_ROOT=/path/to/social/status \
 PYTHONPATH=src python3 -m mnl_social_publisher serve-web --host 127.0.0.1 --port 8420
 ```
+
+Run the browser UI without any local SharePoint sync:
+
+```bash
+MNL_SOCIAL_STORAGE_BACKEND=onedrive \
+MNL_SOCIAL_INBOX_REMOTE_ROOT=social/inbox \
+MNL_SOCIAL_REVIEW_REMOTE_ROOT=social/review \
+MNL_SOCIAL_APPROVAL_REMOTE_ROOT=social/approval \
+MNL_SOCIAL_OUTBOX_REMOTE_ROOT=social/outbox \
+MNL_SOCIAL_STATUS_REMOTE_ROOT=social/status \
+MNL_ONEDRIVE_TENANT_ID=... \
+MNL_ONEDRIVE_CLIENT_ID=... \
+MNL_ONEDRIVE_CLIENT_SECRET=... \
+MNL_ONEDRIVE_DRIVE_ID=... \
+PYTHONPATH=src python3 -m mnl_social_publisher serve-web --host 0.0.0.0 --port 8420
+```
+
+In `onedrive` mode the app reads `social/inbox`, writes `social/review`, `social/approval`, `social/outbox`, and `social/status` back to Microsoft Graph directly. A local SharePoint/OneDrive sync folder is not required. The current implementation stages files only in a temporary runtime workspace while each request is being processed; the system of record remains the remote drive.
