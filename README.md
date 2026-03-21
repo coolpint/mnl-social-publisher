@@ -148,5 +148,5 @@ MNL_SOCIAL_REVIEW_ROOT=/path/to/social/review \
 MNL_SOCIAL_APPROVAL_ROOT=/path/to/social/approval \
 MNL_SOCIAL_OUTBOX_ROOT=/path/to/social/outbox \
 MNL_SOCIAL_STATUS_ROOT=/path/to/social/status \
-mnl-social-publisher serve-web --host 127.0.0.1 --port 8420
+PYTHONPATH=src python3 -m mnl_social_publisher serve-web --host 127.0.0.1 --port 8420
 ```
