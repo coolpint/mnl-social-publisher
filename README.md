@@ -168,3 +168,33 @@ PYTHONPATH=src python3 -m mnl_social_publisher serve-web --host 0.0.0.0 --port 8
 ```
 
 In `onedrive` mode the app reads `social/inbox`, writes `social/review`, `social/approval`, `social/outbox`, and `social/status` back to Microsoft Graph directly. A local SharePoint/OneDrive sync folder is not required. The current implementation stages files only in a temporary runtime workspace while each request is being processed; the system of record remains the remote drive.
+
+## GitHub Actions
+
+This repository now ships with two workflows:
+
+- `.github/workflows/mnl-social-publisher-ci.yml`
+  Runs the unit test suite on every push to `main` and on pull requests.
+- `.github/workflows/mnl-social-publisher-remote-ops.yml`
+  Lets an operator manually run remote OneDrive-backed jobs from the Actions tab.
+
+The remote ops workflow uses the same Microsoft Graph secrets as `mnl-backup`:
+
+- `MNL_ONEDRIVE_TENANT_ID`
+- `MNL_ONEDRIVE_CLIENT_ID`
+- `MNL_ONEDRIVE_CLIENT_SECRET`
+- `MNL_ONEDRIVE_DRIVE_ID`
+
+Supported manual operations:
+
+- `list_batches`
+- `build_review_all`
+- `queue_publish_requests`
+
+The remote ops workflow targets these remote roots by default:
+
+- `social/inbox`
+- `social/review`
+- `social/approval`
+- `social/outbox`
+- `social/status`

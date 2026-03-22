@@ -22,6 +22,7 @@ from .publishers.status import prepare_publish_batch
 from .review_builds import build_review_all_batch, build_review_batch, build_youtube_review_batch
 from .settings import Settings
 from .web_app import serve_web_app
+from .workspace import workspace_from_settings
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -44,6 +45,21 @@ def _build_parser() -> argparse.ArgumentParser:
     serve_web_parser = subparsers.add_parser("serve-web")
     serve_web_parser.add_argument("--host", default="127.0.0.1")
     serve_web_parser.add_argument("--port", type=int, default=8420)
+
+    workspace_list_parser = subparsers.add_parser("workspace-list-batches")
+    workspace_list_parser.add_argument("--limit", type=int, default=10)
+    workspace_list_parser.add_argument("--pretty", action="store_true")
+
+    workspace_build_review_parser = subparsers.add_parser("workspace-build-review-all")
+    workspace_build_review_parser.add_argument("--relative-dir")
+    workspace_build_review_parser.add_argument("--latest", action="store_true")
+    workspace_build_review_parser.add_argument("--pretty", action="store_true")
+
+    workspace_publish_parser = subparsers.add_parser("workspace-create-publish-requests")
+    workspace_publish_parser.add_argument("platform", choices=supported_platforms())
+    workspace_publish_parser.add_argument("--relative-dir")
+    workspace_publish_parser.add_argument("--latest", action="store_true")
+    workspace_publish_parser.add_argument("--pretty", action="store_true")
 
     youtube_parser = subparsers.add_parser("build-youtube")
     youtube_parser.add_argument("package_dir", type=Path)
@@ -150,6 +166,17 @@ def _write_or_print(payload: dict, output_path: Path | None, pretty: bool) -> No
     output_path.write_text(rendered + "\n", encoding="utf-8")
 
 
+def _resolve_workspace_relative_dir(workspace, requested_relative_dir: str | None, latest: bool) -> str:
+    relative_dir = "" if latest else (requested_relative_dir or "").strip()
+    if relative_dir:
+        return relative_dir
+
+    batches = workspace.list_recent_batches(limit=1)
+    if not batches:
+        raise ValueError("No batches are available in the configured workspace")
+    return batches[0].relative_dir
+
+
 def main(argv: list[str] | None = None) -> int:
     settings = Settings.from_env()
     parser = _build_parser()
@@ -194,6 +221,41 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "serve-web":
         serve_web_app(settings, host=args.host, port=args.port)
+        return 0
+
+    if args.command == "workspace-list-batches":
+        workspace = workspace_from_settings(settings)
+        payload = {
+            "schema_version": 1,
+            "workspace_kind": settings.storage_backend,
+            "batch_count": 0,
+            "batches": [],
+        }
+        for batch in workspace.list_recent_batches(limit=args.limit):
+            payload["batches"].append(
+                {
+                    "relative_dir": batch.relative_dir,
+                    "run_id": batch.run.id,
+                    "article_count": batch.article_count,
+                    "exported_at": batch.exported_at,
+                }
+            )
+        payload["batch_count"] = len(payload["batches"])
+        print(_dump_json(payload, pretty=args.pretty))
+        return 0
+
+    if args.command == "workspace-build-review-all":
+        workspace = workspace_from_settings(settings)
+        relative_dir = _resolve_workspace_relative_dir(workspace, args.relative_dir, args.latest)
+        summary = workspace.build_review_all(relative_dir)
+        print(_dump_json(summary, pretty=args.pretty))
+        return 0
+
+    if args.command == "workspace-create-publish-requests":
+        workspace = workspace_from_settings(settings)
+        relative_dir = _resolve_workspace_relative_dir(workspace, args.relative_dir, args.latest)
+        summary = workspace.create_publish_requests(relative_dir, args.platform)
+        print(_dump_json(summary, pretty=args.pretty))
         return 0
 
     if args.command == "build-youtube":
