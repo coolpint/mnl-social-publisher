@@ -295,6 +295,8 @@ def _clean_env_value(value: str) -> str:
     cleaned = (value or "").strip()
     if len(cleaned) >= 2 and cleaned[0] == cleaned[-1] and cleaned[0] in {"'", '"'}:
         cleaned = cleaned[1:-1].strip()
+    if cleaned.upper() in {"__REQUIRED__", "REQUIRED", "CHANGEME", "TODO"}:
+        return ""
     return cleaned
 
 
