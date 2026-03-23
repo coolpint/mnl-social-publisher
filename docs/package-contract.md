@@ -180,6 +180,7 @@ Approval file example:
   "approval_kind": "mnl/social-approval",
   "package_id": "article-000143",
   "article_idxno": 143,
+  "input_method": "web_form",
   "platforms": {
     "threads": {
       "approved": true,

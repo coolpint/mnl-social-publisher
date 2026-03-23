@@ -163,6 +163,18 @@ class ApprovalDecision:
 
 
 @dataclass(frozen=True)
+class ApprovalSubmission:
+    relative_dir: str
+    package_id: str
+    article_idxno: int
+    platform: str
+    approved: bool
+    decided_by: str = ""
+    note: str = ""
+    input_method: str = "web_form"
+
+
+@dataclass(frozen=True)
 class ApprovalRecord:
     schema_version: int
     approval_kind: str
@@ -171,6 +183,7 @@ class ApprovalRecord:
     approval_path: Path
     decided_at: str = ""
     decided_by: str = ""
+    input_method: str = ""
     platforms: dict[str, ApprovalDecision] = field(default_factory=dict)
     notes: list[str] = field(default_factory=list)
 

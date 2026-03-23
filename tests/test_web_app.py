@@ -52,6 +52,8 @@ class WebAppTestCase(unittest.TestCase):
             self.assertIn("Money & Law Social Desk", body)
             self.assertIn("run-000123", body)
             self.assertIn("Build All Review Artifacts", body)
+            self.assertIn("Approval Input: web_form", body)
+            self.assertIn("Approval Store: local_json", body)
 
     def test_build_review_all_action_creates_artifacts(self) -> None:
         with tempfile.TemporaryDirectory() as review_dir, tempfile.TemporaryDirectory() as approval_dir, tempfile.TemporaryDirectory() as outbox_dir, tempfile.TemporaryDirectory() as status_dir:
@@ -148,6 +150,7 @@ class WebAppTestCase(unittest.TestCase):
             )
 
             self.assertTrue(approval_payload["platforms"]["threads"]["approved"])
+            self.assertEqual(approval_payload["input_method"], "web_form")
             self.assertEqual(outbox_payload["request_kind"], "mnl/threads-publish-request")
             self.assertEqual(status_payload["state"], "publishing")
 

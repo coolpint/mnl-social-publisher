@@ -36,6 +36,12 @@ Other channels now start from the same contract as separate builders and publish
 - `instagram`
 
 Builder copy is now externalized into prompt template files under `src/mnl_social_publisher/prompts`, so channel tone and phrasing can be tuned without reopening builder code.
+Approval input is now split into separate modules as well:
+
+- `src/mnl_social_publisher/approval_inputs.py`
+  current browser form handler and future approval channel adapters
+- `src/mnl_social_publisher/approval_stores.py`
+  approval persistence backends for local JSON and remote OneDrive JSON
 
 ## Package contract
 
@@ -209,6 +215,11 @@ Optional notifier secrets for `remote-ops`:
 - `MNL_SOCIAL_NOTIFY_SLACK_WEBHOOK_URL`
 
 When `notify=true`, the workflow sends a short operation summary after `build_review_all` or `queue_publish_requests`. Notification delivery is best-effort and does not fail the main job.
+
+## Next Tuning Surface
+
+- Content generation quality can be tuned at the prompt-template layer under `src/mnl_social_publisher/prompts/`.
+- Approval collection can be tuned independently at the input/store layer without changing publisher logic.
 
 The remote ops workflow targets these remote roots by default:
 

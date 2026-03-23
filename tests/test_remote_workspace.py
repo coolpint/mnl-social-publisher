@@ -187,6 +187,7 @@ class RemoteWorkspaceTestCase(unittest.TestCase):
             client.files["social/outbox/threads/2026/03/14/run-000123/article-000143.json"].decode("utf-8")
         )
         self.assertTrue(approval_payload["platforms"]["threads"]["approved"])
+        self.assertEqual(approval_payload["input_method"], "web_form")
         self.assertEqual(outbox_payload["request_kind"], "mnl/threads-publish-request")
 
 

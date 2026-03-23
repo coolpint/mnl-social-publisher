@@ -5,7 +5,8 @@ import json
 from pathlib import Path
 import tempfile
 
-from .approval_loader import save_approval_decision
+from .approval_inputs import ApprovalSubmission
+from .approval_stores import LocalJsonApprovalStore, RemoteJsonApprovalStore
 from .models import SocialBatch, SocialPackage
 from .onedrive import OneDriveClient, OneDriveConfig
 from .package_loader import load_batch, load_package
@@ -77,6 +78,15 @@ class BaseWorkspace(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def submit_approval(self, submission: ApprovalSubmission) -> None:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def approval_store_kind(self) -> str:
+        raise NotImplementedError
+
+    @abstractmethod
     def create_publish_requests(self, relative_dir: str, platform: str) -> dict:
         raise NotImplementedError
 
@@ -99,6 +109,11 @@ class BaseWorkspace(ABC):
 class LocalWorkspace(BaseWorkspace):
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
+        self.approval_store = (
+            LocalJsonApprovalStore(settings.approval_root)
+            if settings.approval_root is not None
+            else None
+        )
 
     @property
     def has_review_root(self) -> bool:
@@ -111,6 +126,12 @@ class LocalWorkspace(BaseWorkspace):
     @property
     def has_outbox_root(self) -> bool:
         return self.settings.outbox_root is not None
+
+    @property
+    def approval_store_kind(self) -> str:
+        if self.approval_store is None:
+            return "not configured"
+        return self.approval_store.store_kind
 
     def describe_roots(self) -> list[tuple[str, str]]:
         return [
@@ -184,12 +205,9 @@ class LocalWorkspace(BaseWorkspace):
         return json.loads(path.read_text(encoding="utf-8"))
 
     def read_approval(self, relative_dir: str, package_id: str) -> dict | None:
-        if self.settings.approval_root is None:
+        if self.approval_store is None:
             return None
-        path = self.settings.approval_root / relative_dir / f"{package_id}.json"
-        if not path.exists():
-            return None
-        return json.loads(path.read_text(encoding="utf-8"))
+        return self.approval_store.read_approval(relative_dir, package_id)
 
     def build_review_all(self, relative_dir: str) -> dict:
         if self.settings.review_root is None:
@@ -208,18 +226,22 @@ class LocalWorkspace(BaseWorkspace):
         decided_by: str,
         note: str,
     ) -> None:
-        if self.settings.approval_root is None:
-            raise WorkspaceError("Approval root is not configured")
-        save_approval_decision(
-            approval_root=self.settings.approval_root,
-            relative_dir=relative_dir,
-            package_id=package_id,
-            article_idxno=article_idxno,
-            platform=platform,
-            approved=approved,
-            decided_by=decided_by,
-            note=note,
+        self.submit_approval(
+            ApprovalSubmission(
+                relative_dir=relative_dir,
+                package_id=package_id,
+                article_idxno=article_idxno,
+                platform=platform,
+                approved=approved,
+                decided_by=decided_by,
+                note=note,
+            )
         )
+
+    def submit_approval(self, submission: ApprovalSubmission) -> None:
+        if self.approval_store is None:
+            raise WorkspaceError("Approval root is not configured")
+        self.approval_store.save_submission(submission)
 
     def create_publish_requests(self, relative_dir: str, platform: str) -> dict:
         if self.settings.review_root is None or self.settings.outbox_root is None:
@@ -245,6 +267,11 @@ class RemoteWorkspace(BaseWorkspace):
         self.approval_root = settings.approval_remote_root
         self.outbox_root = settings.outbox_remote_root
         self.status_root = settings.status_remote_root
+        self.approval_store = (
+            RemoteJsonApprovalStore(self.approval_root, client)
+            if self.approval_root
+            else None
+        )
 
     @property
     def has_review_root(self) -> bool:
@@ -257,6 +284,12 @@ class RemoteWorkspace(BaseWorkspace):
     @property
     def has_outbox_root(self) -> bool:
         return bool(self.outbox_root)
+
+    @property
+    def approval_store_kind(self) -> str:
+        if self.approval_store is None:
+            return "not configured"
+        return self.approval_store.store_kind
 
     def describe_roots(self) -> list[tuple[str, str]]:
         return [
@@ -321,10 +354,9 @@ class RemoteWorkspace(BaseWorkspace):
         return self._read_remote_json_if_exists(remote_path)
 
     def read_approval(self, relative_dir: str, package_id: str) -> dict | None:
-        if not self.approval_root:
+        if self.approval_store is None:
             return None
-        remote_path = _join_remote(self.approval_root, relative_dir, f"{package_id}.json")
-        return self._read_remote_json_if_exists(remote_path)
+        return self.approval_store.read_approval(relative_dir, package_id)
 
     def build_review_all(self, relative_dir: str) -> dict:
         if not self.review_root:
@@ -349,32 +381,22 @@ class RemoteWorkspace(BaseWorkspace):
         decided_by: str,
         note: str,
     ) -> None:
-        if not self.approval_root:
+        self.submit_approval(
+            ApprovalSubmission(
+                relative_dir=relative_dir,
+                package_id=package_id,
+                article_idxno=article_idxno,
+                platform=platform,
+                approved=approved,
+                decided_by=decided_by,
+                note=note,
+            )
+        )
+
+    def submit_approval(self, submission: ApprovalSubmission) -> None:
+        if self.approval_store is None:
             raise WorkspaceError("Approval remote root is not configured")
-        remote_path = _join_remote(self.approval_root, relative_dir, f"{package_id}.json")
-        payload = self._read_remote_json_if_exists(remote_path) or {
-            "schema_version": 1,
-            "approval_kind": "mnl/social-approval",
-            "package_id": package_id,
-            "article_idxno": int(article_idxno),
-            "platforms": {},
-            "notes": [],
-        }
-        decided_at = _utcnow_seconds()
-        payload["schema_version"] = 1
-        payload["approval_kind"] = "mnl/social-approval"
-        payload["package_id"] = package_id
-        payload["article_idxno"] = int(article_idxno)
-        payload["decided_at"] = decided_at
-        payload["decided_by"] = decided_by
-        platforms = payload.setdefault("platforms", {})
-        platforms[platform] = {
-            "approved": bool(approved),
-            "decided_at": decided_at,
-            "decided_by": decided_by,
-            "note": note,
-        }
-        self.client.write_bytes(remote_path, _render_json(payload, pretty=True))
+        self.approval_store.save_submission(submission)
 
     def create_publish_requests(self, relative_dir: str, platform: str) -> dict:
         if not self.review_root or not self.outbox_root:
@@ -527,14 +549,6 @@ def _join_remote(*parts: str | None) -> str:
     return "/".join(cleaned)
 
 
-def _render_json(payload: dict, pretty: bool) -> bytes:
-    if pretty:
-        rendered = json.dumps(payload, ensure_ascii=False, indent=2)
-    else:
-        rendered = json.dumps(payload, ensure_ascii=False)
-    return (rendered + "\n").encode("utf-8")
-
-
 def _stringify_path(path: Path | None) -> str:
     return str(path) if path is not None else "not set"
 
@@ -543,9 +557,3 @@ def _require_remote_root(value: str | None, label: str) -> str:
     if value:
         return value
     raise WorkspaceError(f"{label} remote root is not configured")
-
-
-def _utcnow_seconds() -> str:
-    from datetime import datetime, timezone
-
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")

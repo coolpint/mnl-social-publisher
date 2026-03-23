@@ -4,6 +4,11 @@ from html import escape
 from urllib.parse import parse_qs, urlencode
 from wsgiref.simple_server import make_server
 
+from .approval_inputs import (
+    ApprovalInputError,
+    BaseApprovalInputHandler,
+    default_approval_input_handler,
+)
 from .platforms import supported_platforms
 from .review_artifacts import artifact_filenames
 from .settings import Settings
@@ -204,14 +209,28 @@ def serve_web_app(settings: Settings, host: str = "127.0.0.1", port: int = 8420)
         server.serve_forever()
 
 
-def create_web_app(settings: Settings, workspace: BaseWorkspace | None = None):
-    return SocialDeskApp(settings, workspace or workspace_from_settings(settings))
+def create_web_app(
+    settings: Settings,
+    workspace: BaseWorkspace | None = None,
+    approval_input: BaseApprovalInputHandler | None = None,
+):
+    return SocialDeskApp(
+        settings,
+        workspace or workspace_from_settings(settings),
+        approval_input=approval_input or default_approval_input_handler(),
+    )
 
 
 class SocialDeskApp:
-    def __init__(self, settings: Settings, workspace: BaseWorkspace) -> None:
+    def __init__(
+        self,
+        settings: Settings,
+        workspace: BaseWorkspace,
+        approval_input: BaseApprovalInputHandler,
+    ) -> None:
         self.settings = settings
         self.workspace = workspace
+        self.approval_input = approval_input
 
     def __call__(self, environ, start_response):
         method = environ.get("REQUEST_METHOD", "GET").upper()
@@ -365,6 +384,12 @@ class SocialDeskApp:
         rows = []
         for label, value in self.workspace.describe_roots():
             rows.append(f"<span class='chip'>{escape(label)}: {escape(value or 'not set')}</span>")
+        rows.append(
+            f"<span class='chip'>Approval Input: {escape(self.approval_input.handler_id)}</span>"
+        )
+        rows.append(
+            f"<span class='chip'>Approval Store: {escape(self.workspace.approval_store_kind)}</span>"
+        )
         return f"""
         <div class="panel span-12">
           <div class="eyebrow">Active Roots</div>
@@ -539,20 +564,12 @@ class SocialDeskApp:
 
         form_markup = ""
         if self.workspace.has_approval_root:
-            form_markup = f"""
-            <form class="stack" method="post" action="/actions/approve">
-              <input type="hidden" name="relative_dir" value="{escape(batch.relative_dir)}">
-              <input type="hidden" name="package_id" value="{escape(package.package_id)}">
-              <input type="hidden" name="article_idxno" value="{package.article.idxno}">
-              <input type="hidden" name="platform" value="{escape(platform)}">
-              <input type="text" name="decided_by" placeholder="reviewer name or email">
-              <textarea name="note" placeholder="review note"></textarea>
-              <div class="nav">
-                <button class="primary" type="submit" name="decision" value="approve">Approve</button>
-                <button type="submit" name="decision" value="reject">Reject</button>
-              </div>
-            </form>
-            """
+            form_markup = self.approval_input.render_form(
+                relative_dir=batch.relative_dir,
+                package_id=package.package_id,
+                article_idxno=package.article.idxno,
+                platform=platform,
+            )
 
         return f"""
         <div class="panel span-6">
@@ -596,23 +613,17 @@ class SocialDeskApp:
         form = self._post(environ)
         relative_dir = form.get("relative_dir", "")
         package_id = form.get("package_id", "")
-        article_idxno = int(form.get("article_idxno", "0"))
-        platform = form.get("platform", "")
-        decision = form.get("decision", "")
-        decided_by = form.get("decided_by", "").strip() or "operator"
-        note = form.get("note", "").strip()
         if not self.workspace.has_approval_root:
             return self._redirect(start_response, f"/article?{urlencode({'relative_dir': relative_dir, 'package_id': package_id, 'flash': 'Approval root is not configured.'})}")
-        self.workspace.save_approval(
-            relative_dir=relative_dir,
-            package_id=package_id,
-            article_idxno=article_idxno,
-            platform=platform,
-            approved=(decision == "approve"),
-            decided_by=decided_by,
-            note=note,
-        )
-        message = f"{platform} {'approved' if decision == 'approve' else 'rejected'}."
+        try:
+            submission = self.approval_input.parse_submission(form)
+        except ApprovalInputError as exc:
+            return self._redirect(
+                start_response,
+                f"/article?{urlencode({'relative_dir': relative_dir, 'package_id': package_id, 'flash': str(exc)})}",
+            )
+        self.workspace.submit_approval(submission)
+        message = self.approval_input.success_message(submission)
         return self._redirect(start_response, f"/article?{urlencode({'relative_dir': relative_dir, 'package_id': package_id, 'flash': message})}")
 
     def _handle_create_publish_requests(self, environ, start_response):

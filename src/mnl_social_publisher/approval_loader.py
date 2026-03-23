@@ -96,6 +96,7 @@ def load_approval(approval_path: str | Path) -> ApprovalRecord:
         approval_path=path,
         decided_at=str(payload.get("decided_at") or ""),
         decided_by=str(payload.get("decided_by") or ""),
+        input_method=str(payload.get("input_method") or ""),
         platforms=platforms,
         notes=list(payload.get("notes", [])),
     )
