@@ -5,6 +5,7 @@ from collections.abc import Mapping
 from html import escape
 
 from .models import ApprovalSubmission
+from .platforms import display_platform_name
 
 
 class ApprovalInputError(ValueError):
@@ -13,7 +14,7 @@ class ApprovalInputError(ValueError):
 
 class BaseApprovalInputHandler(ABC):
     handler_id = "base"
-    label = "Base approval input"
+    label = "기본 승인 입력"
 
     @abstractmethod
     def parse_submission(self, form: Mapping[str, str]) -> ApprovalSubmission:
@@ -31,15 +32,14 @@ class BaseApprovalInputHandler(ABC):
         raise NotImplementedError
 
     def success_message(self, submission: ApprovalSubmission) -> str:
-        return (
-            f"{submission.platform} "
-            f"{'approved' if submission.approved else 'rejected'} via {self.handler_id}."
-        )
+        platform_label = display_platform_name(submission.platform)
+        action_label = "승인" if submission.approved else "보류"
+        return f"{platform_label} 콘텐츠를 {action_label}했습니다."
 
 
 class WebFormApprovalInputHandler(BaseApprovalInputHandler):
     handler_id = "web_form"
-    label = "Browser form approval"
+    label = "브라우저 승인 입력"
 
     def parse_submission(self, form: Mapping[str, str]) -> ApprovalSubmission:
         relative_dir = str(form.get("relative_dir") or "").strip()
@@ -51,17 +51,17 @@ class WebFormApprovalInputHandler(BaseApprovalInputHandler):
         article_idxno_raw = str(form.get("article_idxno") or "0").strip()
 
         if not relative_dir:
-            raise ApprovalInputError("relative_dir is required")
+            raise ApprovalInputError("기사 묶음 경로가 필요합니다.")
         if not package_id:
-            raise ApprovalInputError("package_id is required")
+            raise ApprovalInputError("기사 ID가 필요합니다.")
         if not platform:
-            raise ApprovalInputError("platform is required")
+            raise ApprovalInputError("소셜미디어 종류가 필요합니다.")
         if decision not in {"approve", "reject"}:
-            raise ApprovalInputError("decision must be approve or reject")
+            raise ApprovalInputError("승인 또는 보류 중 하나를 선택해주세요.")
         try:
             article_idxno = int(article_idxno_raw)
         except ValueError as exc:
-            raise ApprovalInputError("article_idxno must be an integer") from exc
+            raise ApprovalInputError("기사 번호 형식이 올바르지 않습니다.") from exc
 
         return ApprovalSubmission(
             relative_dir=relative_dir,
@@ -88,11 +88,11 @@ class WebFormApprovalInputHandler(BaseApprovalInputHandler):
           <input type="hidden" name="package_id" value="{escape(package_id)}">
           <input type="hidden" name="article_idxno" value="{article_idxno}">
           <input type="hidden" name="platform" value="{escape(platform)}">
-          <input type="text" name="decided_by" placeholder="reviewer name or email">
-          <textarea name="note" placeholder="review note"></textarea>
+          <input type="text" name="decided_by" placeholder="검토자 이름 또는 이메일">
+          <textarea name="note" placeholder="메모를 남겨두면 나중에 보기 쉽습니다"></textarea>
           <div class="nav">
-            <button class="primary" type="submit" name="decision" value="approve">Approve</button>
-            <button type="submit" name="decision" value="reject">Reject</button>
+            <button class="primary" type="submit" name="decision" value="approve">승인</button>
+            <button type="submit" name="decision" value="reject">보류</button>
           </div>
         </form>
         """

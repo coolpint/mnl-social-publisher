@@ -72,6 +72,14 @@ REVIEW_BUILD_FILENAMES = {
     "instagram": "instagram_build.json",
 }
 
+PLATFORM_DISPLAY_NAMES = {
+    "youtube_shorts": "유튜브 쇼츠",
+    "threads": "스레드",
+    "x": "X",
+    "facebook": "페이스북",
+    "instagram": "인스타그램",
+}
+
 
 def supported_platforms() -> list[str]:
     return list(DEFAULT_PLATFORM_TARGETS.keys())
@@ -87,3 +95,7 @@ def review_build_filename(platform: str) -> str:
 
 def get_platform_target(package: SocialPackage, platform: str) -> PlatformTarget:
     return package.platforms.get(platform, DEFAULT_PLATFORM_TARGETS[platform])
+
+
+def display_platform_name(platform: str) -> str:
+    return PLATFORM_DISPLAY_NAMES.get(platform, platform)

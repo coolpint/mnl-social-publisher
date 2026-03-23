@@ -95,7 +95,7 @@ class WebAppTestCase(unittest.TestCase):
             body = b"".join(app(environ, start_response)).decode("utf-8")
 
             self.assertTrue(result["status"].startswith("200"))
-            self.assertIn("Money & Law Social Desk", body)
+            self.assertIn("오늘의 소셜 발행 관리판", body)
 
     def test_dashboard_renders_batch_link(self) -> None:
         with tempfile.TemporaryDirectory() as review_dir, tempfile.TemporaryDirectory() as approval_dir, tempfile.TemporaryDirectory() as outbox_dir, tempfile.TemporaryDirectory() as status_dir:
@@ -111,11 +111,12 @@ class WebAppTestCase(unittest.TestCase):
             response, body = _invoke(app, "GET", "/")
 
             self.assertTrue(response["status"].startswith("200"))
-            self.assertIn("Money & Law Social Desk", body)
+            self.assertIn("오늘의 소셜 발행 관리판", body)
             self.assertIn("run-000123", body)
-            self.assertIn("Review Build", body)
-            self.assertIn("Approval Input: web_form", body)
-            self.assertIn("Approval Store: local_json", body)
+            self.assertIn("콘텐츠 초안 만들기", body)
+            self.assertIn("승인 입력 방식: 브라우저 승인 입력", body)
+            self.assertIn("승인 저장 방식: 로컬 JSON 파일", body)
+            self.assertIn("오늘의 작업 요약", body)
 
     def test_build_review_all_action_creates_artifacts(self) -> None:
         with tempfile.TemporaryDirectory() as review_dir, tempfile.TemporaryDirectory() as approval_dir, tempfile.TemporaryDirectory() as outbox_dir, tempfile.TemporaryDirectory() as status_dir:
@@ -168,8 +169,8 @@ class WebAppTestCase(unittest.TestCase):
             )
 
             self.assertTrue(response["status"].startswith("200"))
-            self.assertIn("Build Review Artifacts", body)
-            self.assertIn("Start Build Review All", body)
+            self.assertIn("콘텐츠 초안 만들기", body)
+            self.assertIn("소셜미디어별 콘텐츠 초안 만들기", body)
 
     def test_get_action_without_required_params_shows_help(self) -> None:
         app = create_web_app(Settings(inbox_root=FIXTURE_INBOX_ROOT))
@@ -177,8 +178,8 @@ class WebAppTestCase(unittest.TestCase):
         response, body = _invoke(app, "GET", "/actions/create-publish-requests")
 
         self.assertTrue(response["status"].startswith("200"))
-        self.assertIn("Queue Approved", body)
-        self.assertIn("Go To Dashboard", body)
+        self.assertIn("게시 준비", body)
+        self.assertIn("대시보드로 가기", body)
 
     def test_approve_and_queue_publish_request_from_browser_flow(self) -> None:
         with tempfile.TemporaryDirectory() as review_dir, tempfile.TemporaryDirectory() as approval_dir, tempfile.TemporaryDirectory() as outbox_dir, tempfile.TemporaryDirectory() as status_dir:

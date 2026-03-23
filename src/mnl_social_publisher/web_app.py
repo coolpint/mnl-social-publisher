@@ -10,7 +10,7 @@ from .approval_inputs import (
     BaseApprovalInputHandler,
     default_approval_input_handler,
 )
-from .platforms import supported_platforms
+from .platforms import display_platform_name, supported_platforms
 from .review_artifacts import artifact_filenames
 from .settings import Settings
 from .workspace import BaseWorkspace, WorkspaceError, workspace_from_settings
@@ -345,8 +345,8 @@ class SocialDeskApp:
             return self._html_response(
                 start_response,
                 self._layout(
-                    "Error",
-                    f"<div class='panel span-12'><h2>Something broke</h2><p>{escape(str(exc))}</p></div>",
+                    "오류",
+                    f"<div class='panel span-12'><h2>문제가 생겼습니다</h2><p>{escape(str(exc))}</p></div>",
                     current="error",
                 ),
                 status="500 Internal Server Error",
@@ -355,8 +355,8 @@ class SocialDeskApp:
         return self._html_response(
             start_response,
             self._layout(
-                "Not Found",
-                "<div class='panel span-12'><h2>Page not found</h2></div>",
+                "찾을 수 없음",
+                "<div class='panel span-12'><h2>페이지를 찾을 수 없습니다</h2></div>",
                 current="missing",
             ),
             status="404 Not Found",
@@ -447,10 +447,10 @@ class SocialDeskApp:
     <div class="shell">
       <section class="hero">
         <div class="eyebrow">Money & Law Social Desk</div>
-        <h1>Daily Publishing Control Room</h1>
-        <p>백업 exporter가 만든 inbox를 읽고, review 산출물 생성부터 승인과 publish request 큐잉까지 브라우저에서 운영하는 MVP입니다.</p>
+        <h1>오늘의 소셜 발행 관리판</h1>
+        <p>백업으로 모아진 기사를 읽고, 소셜미디어별 콘텐츠 초안을 만들고, 검토한 뒤 게시 준비까지 이어가는 운영 화면입니다.</p>
         <div class="nav">
-          <a class="button ghost" href="/">Dashboard</a>
+          <a class="button ghost" href="/">대시보드</a>
         </div>
       </section>
       {flash_markup}
@@ -470,12 +470,12 @@ class SocialDeskApp:
             batch_cards.append(self._batch_card(batch))
 
         if not batch_cards:
-            batch_cards.append("<div class='panel span-12 empty'>아직 읽을 수 있는 batch가 없습니다.</div>")
+            batch_cards.append("<div class='panel span-12 empty'>아직 읽을 수 있는 기사 묶음이 없습니다.</div>")
 
         config_panel = self._config_panel()
         summary_panel = self._dashboard_summary_panel(batches)
         body = summary_panel + config_panel + "".join(batch_cards)
-        return self._layout("Dashboard", body, flash=flash)
+        return self._layout("대시보드", body, flash=flash)
 
     def _batch_page(self, environ) -> str:
         query = self._query(environ)
@@ -487,7 +487,7 @@ class SocialDeskApp:
             self._batch_articles_table(batch),
             self._batch_status_panel(batch),
         ]
-        return self._layout(f"Batch {relative_dir}", "".join(cards), current="batch", flash=flash)
+        return self._layout(f"기사 묶음 {relative_dir}", "".join(cards), current="batch", flash=flash)
 
     def _article_page(self, environ) -> str:
         query = self._query(environ)
@@ -498,23 +498,23 @@ class SocialDeskApp:
         package = self.workspace.load_package(relative_dir, package_id)
 
         platform_nav = "".join(
-            f'<a class="anchor-link" href="#platform-{escape(platform)}">{escape(platform)}</a>'
+            f'<a class="anchor-link" href="#platform-{escape(platform)}">{escape(display_platform_name(platform))}</a>'
             for platform in supported_platforms()
         )
         body = [
             f"""
             <div class="panel span-12">
-              <div class="eyebrow">Article Review</div>
+              <div class="eyebrow">기사별 콘텐츠 보기</div>
               <h2>{escape(package.article.headline)}</h2>
               <div class="meta">
                 <span>{escape(relative_dir)}</span>
-                <span>idxno {package.article.idxno}</span>
-                <span>{escape(package.article.section_name or '미분류')}</span>
+                <span>기사 번호 {package.article.idxno}</span>
+                <span>{escape(package.article.section_name or '분류 없음')}</span>
               </div>
               <p>{escape(package.article.summary or package.article.body_text[:220])}</p>
               <div class="nav">
-                <a class="button ghost" href="/batch?{urlencode({'relative_dir': relative_dir})}">Back To Batch</a>
-                <a class="button ghost" href="{escape(package.article.canonical_url)}">Open Source</a>
+                <a class="button ghost" href="/batch?{urlencode({'relative_dir': relative_dir})}">기사 묶음으로 돌아가기</a>
+                <a class="button ghost" href="{escape(package.article.canonical_url)}">원문 보기</a>
               </div>
               <div class="anchor-nav">{platform_nav}</div>
             </div>
@@ -528,17 +528,19 @@ class SocialDeskApp:
     def _config_panel(self) -> str:
         rows = []
         for label, value in self.workspace.describe_roots():
-            rows.append(f"<span class='chip'>{escape(label)}: {escape(value or 'not set')}</span>")
+            rows.append(
+                f"<span class='chip'>{escape(_display_root_label(label))}: {escape(_display_root_value(value))}</span>"
+            )
         rows.append(
-            f"<span class='chip'>Approval Input: {escape(self.approval_input.handler_id)}</span>"
+            f"<span class='chip'>승인 입력 방식: {escape(self.approval_input.label)}</span>"
         )
         rows.append(
-            f"<span class='chip'>Approval Store: {escape(self.workspace.approval_store_kind)}</span>"
+            f"<span class='chip'>승인 저장 방식: {escape(_display_approval_store_label(self.workspace.approval_store_kind))}</span>"
         )
         return f"""
         <div class="panel span-12">
-          <div class="eyebrow">Active Roots</div>
-          <h2>Workspace Wiring</h2>
+          <div class="eyebrow">연결 상태</div>
+          <h2>저장 위치와 연결 경로</h2>
           <div class="meta">{''.join(rows)}</div>
         </div>
         """
@@ -547,17 +549,17 @@ class SocialDeskApp:
         latest = batches[0] if batches else None
         article_total = sum(batch.article_count for batch in batches)
         cards = [
-            ("Visible Batches", str(len(batches)), "현재 대시보드에 보이는 최근 batch 수"),
-            ("Queued Articles", str(article_total), "최근 batch 안의 기사 수 합계"),
+            ("기사 묶음", str(len(batches)), "현재 보이는 최근 기사 묶음 수"),
+            ("기사 수", str(article_total), "최근 기사 묶음 안의 기사 수 합계"),
             (
-                "Latest Run",
+                "최신 백업",
                 "-" if latest is None else str(latest.run.id),
-                "가장 최근 exporter run id",
+                "가장 최근 백업 실행 번호",
             ),
             (
-                "Latest Batch",
+                "최신 묶음",
                 "-" if latest is None else latest.relative_dir.split("/")[-1],
-                "바로 열어볼 batch 이름",
+                "바로 열어볼 기사 묶음 이름",
             ),
         ]
         markup = "".join(
@@ -572,9 +574,9 @@ class SocialDeskApp:
         )
         return f"""
         <div class="panel span-12">
-          <div class="eyebrow">Operator Snapshot</div>
-          <h2>Today&apos;s Desk</h2>
-          <p class="helper">먼저 최신 batch를 열고 review 생성 여부를 확인한 다음, 기사별 승인과 플랫폼별 queue 작업으로 넘어가면 됩니다.</p>
+          <div class="eyebrow">오늘 할 일 요약</div>
+          <h2>오늘의 작업 요약</h2>
+          <p class="helper">먼저 최신 기사 묶음을 열고 소셜미디어별 콘텐츠 초안을 만든 다음, 기사별 검토와 게시 준비로 넘어가면 됩니다.</p>
           <div class="stat-strip">{markup}</div>
         </div>
         """
@@ -585,33 +587,33 @@ class SocialDeskApp:
         if not relative_dir:
             body = """
             <div class="panel span-12">
-              <div class="eyebrow">Action Help</div>
-              <h2>Build Review All</h2>
-              <p>이 주소는 batch에서 review 산출물을 생성하는 작업용 경로입니다. 직접 URL만 열기보다 대시보드에서 batch를 연 뒤 버튼을 누르는 방식이 맞습니다.</p>
+              <div class="eyebrow">도움말</div>
+              <h2>콘텐츠 초안 만들기</h2>
+              <p>이 주소는 기사 묶음 안의 기사들을 소셜미디어별 콘텐츠 초안으로 바꾸는 작업용 경로입니다. 대시보드에서 기사 묶음을 연 뒤 버튼을 누르는 방식이 더 자연스럽습니다.</p>
               <div class="nav">
-                <a class="button primary" href="/">Go To Dashboard</a>
+                <a class="button primary" href="/">대시보드로 가기</a>
               </div>
             </div>
             """
-            return self._layout("Build Review All", body, current="action")
+            return self._layout("콘텐츠 초안 만들기", body, current="action")
 
         body = f"""
         <div class="panel span-12">
-          <div class="eyebrow">Action Confirm</div>
-          <h2>Build Review Artifacts</h2>
-          <p><strong>{escape(relative_dir)}</strong> batch의 플랫폼별 review 산출물을 다시 생성합니다.</p>
+          <div class="eyebrow">실행 확인</div>
+          <h2>콘텐츠 초안 만들기</h2>
+          <p><strong>{escape(relative_dir)}</strong> 기사 묶음의 기사들을 소셜미디어별 콘텐츠 초안으로 다시 만듭니다.</p>
           <div class="nav">
-            <a class="button ghost" href="/batch?{urlencode({'relative_dir': relative_dir})}">Back To Batch</a>
+            <a class="button ghost" href="/batch?{urlencode({'relative_dir': relative_dir})}">기사 묶음으로 돌아가기</a>
           </div>
         </div>
         <div class="panel span-12">
           <form class="stack" method="post" action="/actions/build-review-all">
             <input type="hidden" name="relative_dir" value="{escape(relative_dir)}">
-            <button class="primary" type="submit">Start Build Review All</button>
+            <button class="primary" type="submit">소셜미디어별 콘텐츠 초안 만들기</button>
           </form>
         </div>
         """
-        return self._layout("Build Review All", body, current="action")
+        return self._layout("콘텐츠 초안 만들기", body, current="action")
 
     def _create_publish_requests_confirm_page(self, environ) -> str:
         query = self._query(environ)
@@ -620,34 +622,34 @@ class SocialDeskApp:
         if not relative_dir or not platform:
             body = """
             <div class="panel span-12">
-              <div class="eyebrow">Action Help</div>
-              <h2>Queue Approved</h2>
-              <p>이 주소는 승인된 콘텐츠를 platform outbox로 넘기는 작업용 경로입니다. batch 화면에서 플랫폼 버튼을 눌러 실행하는 방식이 맞습니다.</p>
+              <div class="eyebrow">도움말</div>
+              <h2>게시 준비</h2>
+              <p>이 주소는 승인된 콘텐츠를 소셜미디어별 게시 대기 상태로 넘기는 작업용 경로입니다. 기사 묶음 화면에서 버튼을 눌러 실행하는 방식이 맞습니다.</p>
               <div class="nav">
-                <a class="button primary" href="/">Go To Dashboard</a>
+                <a class="button primary" href="/">대시보드로 가기</a>
               </div>
             </div>
             """
-            return self._layout("Queue Approved", body, current="action")
+            return self._layout("게시 준비", body, current="action")
 
         body = f"""
         <div class="panel span-12">
-          <div class="eyebrow">Action Confirm</div>
-          <h2>Queue Approved For {escape(platform)}</h2>
-          <p><strong>{escape(relative_dir)}</strong> batch에서 승인된 <strong>{escape(platform)}</strong> 요청만 outbox로 보냅니다.</p>
+          <div class="eyebrow">실행 확인</div>
+          <h2>{escape(display_platform_name(platform))} 게시 준비</h2>
+          <p><strong>{escape(relative_dir)}</strong> 기사 묶음에서 승인된 <strong>{escape(display_platform_name(platform))}</strong> 콘텐츠만 게시 대기 상태로 넘깁니다.</p>
           <div class="nav">
-            <a class="button ghost" href="/batch?{urlencode({'relative_dir': relative_dir})}">Back To Batch</a>
+            <a class="button ghost" href="/batch?{urlencode({'relative_dir': relative_dir})}">기사 묶음으로 돌아가기</a>
           </div>
         </div>
         <div class="panel span-12">
           <form class="stack" method="post" action="/actions/create-publish-requests">
             <input type="hidden" name="relative_dir" value="{escape(relative_dir)}">
             <input type="hidden" name="platform" value="{escape(platform)}">
-            <button class="primary" type="submit">Queue Approved Requests</button>
+            <button class="primary" type="submit">{escape(display_platform_name(platform))} 게시 준비하기</button>
           </form>
         </div>
         """
-        return self._layout("Queue Approved", body, current="action")
+        return self._layout("게시 준비", body, current="action")
 
     def _approval_action_help_page(self, environ) -> str:
         query = self._query(environ)
@@ -661,32 +663,32 @@ class SocialDeskApp:
         target = f"/article?{urlencode(params)}" if params else "/"
         body = f"""
         <div class="panel span-12">
-          <div class="eyebrow">Action Help</div>
-          <h2>Approval Uses A Form</h2>
-          <p>승인은 직접 URL로 여는 액션이 아니라 기사 상세 화면의 승인 폼으로 처리합니다.</p>
+          <div class="eyebrow">도움말</div>
+          <h2>승인은 기사 화면에서 합니다</h2>
+          <p>승인은 직접 URL을 여는 방식이 아니라 기사 상세 화면의 승인 폼에서 처리합니다.</p>
           <div class="nav">
-            <a class="button primary" href="{escape(target)}">Go To Review Screen</a>
+            <a class="button primary" href="{escape(target)}">기사 화면으로 가기</a>
           </div>
         </div>
         """
-        return self._layout("Approval Help", body, current="action")
+        return self._layout("승인 안내", body, current="action")
 
     def _batch_card(self, batch) -> str:
         params = urlencode({"relative_dir": batch.relative_dir})
         action_forms = [
-            f'<a class="button primary" href="/batch?{params}">Open Batch</a>'
+            f'<a class="button primary" href="/batch?{params}">기사 묶음 열기</a>'
         ]
         if self.workspace.has_review_root:
             action_forms.append(
-                f'<a class="button secondary" href="/actions/build-review-all?{params}">Review Build</a>'
+                f'<a class="button secondary" href="/actions/build-review-all?{params}">콘텐츠 초안 만들기</a>'
             )
         story_items = "".join(
             f"""
             <div class="story-item">
               <strong>{escape(package_ref.headline or package_ref.package_dir)}</strong>
               <div class="meta">
-                <span>idxno {package_ref.article_idxno}</span>
-                <span>{escape(package_ref.change_type or 'updated')}</span>
+                <span>기사 번호 {package_ref.article_idxno}</span>
+                <span>{escape(_display_change_type_label(package_ref.change_type))}</span>
               </div>
             </div>
             """
@@ -694,14 +696,14 @@ class SocialDeskApp:
         )
         return f"""
         <div class="panel span-6">
-          <div class="eyebrow">Batch</div>
+          <div class="eyebrow">기사 묶음</div>
           <h2>{escape(batch.relative_dir)}</h2>
           <div class="meta">
-            <span>run {batch.run.id}</span>
-            <span>{batch.article_count} article(s)</span>
+            <span>백업 실행 {batch.run.id}</span>
+            <span>기사 {batch.article_count}건</span>
             <span>{escape(batch.exported_at)}</span>
           </div>
-          <p class="helper">review 결과물을 만들고, 승인된 콘텐츠만 outbox로 넘기는 운영 시작점입니다.</p>
+          <p class="helper">이 기사 묶음에서 소셜미디어별 콘텐츠 초안을 만들고, 검토한 뒤 필요한 것만 게시 준비로 넘깁니다.</p>
           <div class="story-list">{story_items or "<div class='empty'>기사 미리보기가 없습니다.</div>"}</div>
           <div class="action-stack">
             {''.join(action_forms)}
@@ -713,27 +715,27 @@ class SocialDeskApp:
         action_forms = []
         if self.workspace.has_review_root:
             action_forms.append(
-                f'<a class="button primary" href="/actions/build-review-all?{urlencode({"relative_dir": batch.relative_dir})}">Build All Review Artifacts</a>'
+                f'<a class="button primary" href="/actions/build-review-all?{urlencode({"relative_dir": batch.relative_dir})}">소셜미디어별 콘텐츠 초안 만들기</a>'
             )
         for platform in supported_platforms():
             if not self.workspace.has_review_root or not self.workspace.has_outbox_root:
                 continue
             action_forms.append(
-                f'<a class="button ghost" href="/actions/create-publish-requests?{urlencode({"relative_dir": batch.relative_dir, "platform": platform})}">{escape(platform)} Queue Approved</a>'
+                f'<a class="button ghost" href="/actions/create-publish-requests?{urlencode({"relative_dir": batch.relative_dir, "platform": platform})}">{escape(display_platform_name(platform))} 게시 준비</a>'
             )
 
         return f"""
         <div class="panel span-12">
-          <div class="eyebrow">Batch Detail</div>
+          <div class="eyebrow">기사 묶음 상세</div>
           <h2>{escape(batch.relative_dir)}</h2>
           <div class="meta">
-            <span>run {batch.run.id}</span>
-            <span>mode {escape(batch.run.mode or 'daily')}</span>
-            <span>{batch.article_count} article(s)</span>
+            <span>백업 실행 {batch.run.id}</span>
+            <span>실행 방식 {escape(_display_batch_mode_label(batch.run.mode))}</span>
+            <span>기사 {batch.article_count}건</span>
           </div>
-          <p class="helper">먼저 review build를 확인하고, 기사별 승인 이후 필요한 플랫폼만 queue로 넘기면 됩니다.</p>
+          <p class="helper">먼저 소셜미디어별 콘텐츠 초안을 만들고, 기사별로 검토한 뒤 필요한 소셜미디어만 게시 준비로 넘기면 됩니다.</p>
           <div class="nav">
-            <a class="button ghost" href="/">Back</a>
+            <a class="button ghost" href="/">대시보드로 돌아가기</a>
             {''.join(action_forms)}
           </div>
         </div>
@@ -768,14 +770,14 @@ class SocialDeskApp:
             )
         return f"""
         <div class="panel span-8">
-          <div class="eyebrow">Articles</div>
-          <h2>Review Queue</h2>
+          <div class="eyebrow">기사 목록</div>
+          <h2>검토할 기사</h2>
           <table>
             <thead>
               <tr>
-                <th>Article</th>
-                <th>Section</th>
-                <th>Platforms</th>
+                <th>기사</th>
+                <th>섹션</th>
+                <th>소셜미디어별 상태</th>
               </tr>
             </thead>
             <tbody>
@@ -790,15 +792,18 @@ class SocialDeskApp:
         for platform in supported_platforms():
             status_payload = self.workspace.read_batch_status(batch, platform)
             if status_payload is None:
-                items.append(f"<div class='chip warn'>{escape(platform)}: no status yet</div>")
-            else:
                 items.append(
-                    f"<div class='chip {'good' if status_payload['state'] in {'approved', 'published'} else 'warn'}'>{escape(platform)}: {escape(status_payload['state'])}</div>"
+                    f"<div class='chip warn'>{escape(display_platform_name(platform))}: 아직 상태가 없습니다</div>"
+                )
+            else:
+                state = str(status_payload.get("state") or "unknown")
+                items.append(
+                    f"<div class='chip {'good' if state in {'approved', 'published'} else 'warn'}'>{escape(display_platform_name(platform))}: {escape(_display_state_label(state))}</div>"
                 )
         return f"""
         <div class="panel span-4">
-          <div class="eyebrow">Status</div>
-          <h2>Platform Health</h2>
+          <div class="eyebrow">진행 상태</div>
+          <h2>소셜미디어 상태</h2>
           <div class="stack">{''.join(items)}</div>
         </div>
         """
@@ -806,16 +811,16 @@ class SocialDeskApp:
     def _article_overview_card(self, relative_dir: str, package_id: str) -> str:
         return f"""
         <div class="panel span-12">
-          <div class="eyebrow">Operator Note</div>
+          <div class="eyebrow">진행 안내</div>
           <div class="section-title">
-            <h2>Review Then Dispatch</h2>
-            <a class="muted-link" href="/actions/approve?{urlencode({'relative_dir': relative_dir, 'package_id': package_id})}">Approval Help</a>
+            <h2>검토 후 게시 준비</h2>
+            <a class="muted-link" href="/actions/approve?{urlencode({'relative_dir': relative_dir, 'package_id': package_id})}">승인 안내</a>
           </div>
-          <p class="helper">이 화면에서는 플랫폼별 산출물을 확인하고 승인/반려를 남깁니다. 승인된 플랫폼만 outbox request로 넘어갑니다.</p>
+          <p class="helper">이 화면에서는 소셜미디어별 콘텐츠 초안을 보고 승인 또는 보류를 정합니다. 승인된 콘텐츠만 게시 준비 단계로 넘어갑니다.</p>
           <div class="meta">
-            <span>relative_dir: {escape(relative_dir)}</span>
-            <span>package: {escape(package_id)}</span>
-            <span>flow: review -> approval -> queue</span>
+            <span>기사 묶음: {escape(relative_dir)}</span>
+            <span>기사 ID: {escape(package_id)}</span>
+            <span>흐름: 기사 -> 콘텐츠 초안 -> 승인 -> 게시 준비</span>
           </div>
         </div>
         """
@@ -830,20 +835,20 @@ class SocialDeskApp:
             artifact_text = self.workspace.read_review_artifact(batch.relative_dir, package.package_id, artifact_name)
             if artifact_text is not None:
                 draft_preview_blocks.append(
-                    f"<div class='stack'><div class='chip'>{escape(artifact_name)}</div><pre>{escape(artifact_text)}</pre></div>"
+                    f"<div class='stack'><div class='chip'>{escape(_display_artifact_name(artifact_name))}</div><pre>{escape(artifact_text)}</pre></div>"
                 )
 
         if not draft_preview_blocks:
-            draft_preview_blocks.append("<div class='empty'>아직 review artifact가 없습니다.</div>")
+            draft_preview_blocks.append("<div class='empty'>아직 검토용 콘텐츠 초안이 없습니다.</div>")
 
-        approval_markup = "<div class='chip warn'>no approval yet</div>"
+        approval_markup = "<div class='chip warn'>아직 승인 전</div>"
         if decision is not None:
             approval_markup = (
-                f"<div class='chip {'good' if decision.get('approved') else 'blocked'}'>{escape('approved' if decision.get('approved') else 'rejected')} by {escape(str(decision.get('decided_by') or 'unknown'))}</div>"
+                f"<div class='chip {'good' if decision.get('approved') else 'blocked'}'>{escape('승인됨' if decision.get('approved') else '보류됨')} · {escape(str(decision.get('decided_by') or '알 수 없음'))}</div>"
             )
         status_markup = ""
         if status_payload is not None:
-            status_markup = f"<div class='chip'>{escape(status_payload.get('state', 'unknown'))}</div>"
+            status_markup = f"<div class='chip'>{escape(_display_state_label(str(status_payload.get('state', 'unknown'))))}</div>"
 
         form_markup = ""
         if self.workspace.has_approval_root:
@@ -856,7 +861,7 @@ class SocialDeskApp:
 
         return f"""
         <div class="panel span-6" id="platform-{escape(platform)}">
-          <div class="eyebrow">{escape(platform)}</div>
+          <div class="eyebrow">{escape(display_platform_name(platform))}</div>
           <h3>{escape(package.article.headline)}</h3>
           <div class="meta">
             {approval_markup}
@@ -875,7 +880,7 @@ class SocialDeskApp:
         else:
             status_payload = self.workspace.read_article_status(batch, package, platform)
         if status_payload is None:
-            return f"<span class='chip'>{escape(platform)}: idle</span>"
+            return f"<span class='chip'>{escape(display_platform_name(platform))}: 대기</span>"
         state = str(status_payload.get("state") or "unknown")
         cls = "chip"
         if state in {"approved", "published"}:
@@ -884,15 +889,18 @@ class SocialDeskApp:
             cls += " blocked"
         else:
             cls += " warn"
-        return f"<span class='{cls}'>{escape(platform)}: {escape(state)}</span>"
+        return f"<span class='{cls}'>{escape(display_platform_name(platform))}: {escape(_display_state_label(state))}</span>"
 
     def _handle_build_review_all(self, environ, start_response):
         form = self._post(environ)
         relative_dir = form.get("relative_dir", "")
         if not self.workspace.has_review_root:
-            return self._redirect(start_response, f"/batch?{urlencode({'relative_dir': relative_dir, 'flash': 'Review root is not configured.'})}")
+            return self._redirect(
+                start_response,
+                f"/batch?{urlencode({'relative_dir': relative_dir, 'flash': '콘텐츠 초안을 저장할 경로가 아직 연결되지 않았습니다.'})}",
+            )
         summary = self.workspace.build_review_all(relative_dir)
-        message = f"Built review artifacts for {summary['platform_count']} platforms."
+        message = f"{summary['platform_count']}개 소셜미디어용 콘텐츠 초안을 만들었습니다."
         return self._redirect(start_response, f"/batch?{urlencode({'relative_dir': relative_dir, 'flash': message})}")
 
     def _handle_approve(self, environ, start_response):
@@ -900,7 +908,10 @@ class SocialDeskApp:
         relative_dir = form.get("relative_dir", "")
         package_id = form.get("package_id", "")
         if not self.workspace.has_approval_root:
-            return self._redirect(start_response, f"/article?{urlencode({'relative_dir': relative_dir, 'package_id': package_id, 'flash': 'Approval root is not configured.'})}")
+            return self._redirect(
+                start_response,
+                f"/article?{urlencode({'relative_dir': relative_dir, 'package_id': package_id, 'flash': '승인 정보를 저장할 경로가 아직 연결되지 않았습니다.'})}",
+            )
         try:
             submission = self.approval_input.parse_submission(form)
         except ApprovalInputError as exc:
@@ -917,7 +928,104 @@ class SocialDeskApp:
         relative_dir = form.get("relative_dir", "")
         platform = form.get("platform", "")
         if not self.workspace.has_review_root or not self.workspace.has_outbox_root:
-            return self._redirect(start_response, f"/batch?{urlencode({'relative_dir': relative_dir, 'flash': 'Review root or outbox root is not configured.'})}")
+            return self._redirect(
+                start_response,
+                f"/batch?{urlencode({'relative_dir': relative_dir, 'flash': '콘텐츠 초안 저장 경로 또는 게시 준비 경로가 아직 연결되지 않았습니다.'})}",
+            )
         summary = self.workspace.create_publish_requests(relative_dir, platform)
-        message = f"{platform}: queued {summary['request_count']} publish request(s)."
+        message = (
+            f"{display_platform_name(platform)}용 콘텐츠 {summary['request_count']}건을 "
+            "게시 준비 상태로 넘겼습니다."
+        )
         return self._redirect(start_response, f"/batch?{urlencode({'relative_dir': relative_dir, 'flash': message})}")
+
+
+def _display_state_label(state: str) -> str:
+    labels = {
+        "received": "받음",
+        "building": "만드는 중",
+        "built": "초안 생성 완료",
+        "review_required": "검토 필요",
+        "approved": "승인됨",
+        "publishing": "게시 준비 중",
+        "published": "게시 완료",
+        "blocked": "보류",
+        "failed": "실패",
+        "skipped": "건너뜀",
+        "ready_to_publish": "게시 가능",
+        "awaiting_review": "검토 대기",
+        "awaiting_platform_approval": "승인 대기",
+        "blocked_missing_review_draft": "초안 없음",
+        "unknown": "상태 미확인",
+    }
+    return labels.get(state, state)
+
+
+def _display_root_label(label: str) -> str:
+    labels = {
+        "Mode": "연결 방식",
+        "Inbox": "기사 보관함",
+        "Review": "콘텐츠 초안",
+        "Approval": "승인 기록",
+        "Outbox": "게시 준비함",
+        "Status": "진행 상태",
+    }
+    return labels.get(label, label)
+
+
+def _display_root_value(value: str | None) -> str:
+    if value in {None, "", "not set"}:
+        return "미설정"
+    if value == "local filesystem":
+        return "로컬 파일"
+    if value == "onedrive remote":
+        return "원격 OneDrive"
+    return value
+
+
+def _display_approval_store_label(store_kind: str) -> str:
+    labels = {
+        "local_json": "로컬 JSON 파일",
+        "remote_json": "원격 JSON 파일",
+        "not configured": "미설정",
+    }
+    return labels.get(store_kind, store_kind)
+
+
+def _display_change_type_label(change_type: str | None) -> str:
+    labels = {
+        "created": "새로 들어온 기사",
+        "updated": "수정된 기사",
+        "recent_backfill": "테스트용으로 다시 불러온 기사",
+        "backfill_recent": "테스트용으로 다시 불러온 기사",
+    }
+    if not change_type:
+        return "변경된 기사"
+    return labels.get(change_type, change_type)
+
+
+def _display_batch_mode_label(mode: str | None) -> str:
+    labels = {
+        "daily": "일간 백업",
+        "monthly": "월간 백업",
+        "recent_backfill": "최근 기사 테스트",
+        "backfill_recent": "최근 기사 테스트",
+    }
+    if not mode:
+        return "일반"
+    return labels.get(mode, mode)
+
+
+def _display_artifact_name(artifact_name: str) -> str:
+    labels = {
+        "threads_post.txt": "스레드용 글",
+        "x_post.txt": "X용 글",
+        "facebook_post.txt": "페이스북용 글",
+        "instagram_caption.txt": "인스타그램용 캡션",
+        "youtube_title.txt": "유튜브 쇼츠 제목",
+        "youtube_description.txt": "유튜브 쇼츠 설명",
+        "youtube_script.txt": "유튜브 쇼츠 대본",
+        "youtube_storyboard.txt": "유튜브 쇼츠 구성안",
+        "youtube_scenes.json": "유튜브 쇼츠 장면 데이터",
+    }
+    return labels.get(artifact_name, artifact_name)

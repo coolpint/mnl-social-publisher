@@ -137,7 +137,7 @@ class RemoteWorkspaceTestCase(unittest.TestCase):
             query={"relative_dir": "2026/03/14/run-000123"},
         )
         self.assertTrue(response["status"].startswith("200"))
-        self.assertIn("Review Queue", batch_body)
+        self.assertIn("검토할 기사", batch_body)
 
         response, article_body = _invoke(
             app,
@@ -149,7 +149,7 @@ class RemoteWorkspaceTestCase(unittest.TestCase):
             },
         )
         self.assertTrue(response["status"].startswith("200"))
-        self.assertIn("Article Review", article_body)
+        self.assertIn("기사별 콘텐츠 보기", article_body)
         self.assertFalse(any(path.endswith(("source.html", "body.txt", "article.xml")) for path in client.read_calls))
 
     def test_remote_workspace_builds_review_and_publish_requests(self) -> None:
@@ -194,7 +194,7 @@ class RemoteWorkspaceTestCase(unittest.TestCase):
         response, body = _invoke(app, "GET", "/")
         self.assertTrue(response["status"].startswith("200"))
         self.assertIn("run-000123", body)
-        self.assertIn("onedrive remote", body)
+        self.assertIn("원격 OneDrive", body)
 
         response, _ = _invoke(
             app,
