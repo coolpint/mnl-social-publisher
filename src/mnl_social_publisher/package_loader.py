@@ -93,6 +93,66 @@ def _load_payloads(package_dir: Path) -> tuple[dict, dict, dict]:
     return package_payload, article_payload, rights_payload
 
 
+def _validate_batch_manifest_payload(payload: dict) -> list[str]:
+    errors: list[str] = []
+    missing_fields = _missing_fields(payload, BATCH_REQUIRED_FIELDS)
+    if missing_fields:
+        errors.append(f"batch.json missing fields: {', '.join(missing_fields)}")
+        return errors
+
+    packages = payload.get("packages")
+    if not isinstance(packages, list):
+        return ["batch.json packages must be a list"]
+
+    if int(payload.get("article_count") or 0) != len(packages):
+        errors.append("batch.json article_count does not match packages length")
+
+    for package_ref in packages:
+        if not isinstance(package_ref, dict):
+            errors.append("batch.json package entry must be an object")
+            continue
+        if not package_ref.get("package_dir"):
+            errors.append("batch.json package entry missing package_dir")
+
+    return errors
+
+
+def _batch_from_payload(payload: dict, root: Path) -> SocialBatch:
+    errors = _validate_batch_manifest_payload(payload)
+    if errors:
+        raise ValueError("; ".join(errors))
+
+    package_refs = [
+        BatchPackageRef(
+            article_idxno=int(item.get("article_idxno") or 0),
+            headline=str(item.get("headline") or ""),
+            change_type=str(item.get("change_type") or ""),
+            package_dir=str(item.get("package_dir") or ""),
+            package_path=str(item.get("package_path") or ""),
+            article_json_path=str(item.get("article_json_path") or ""),
+            rights_path=str(item.get("rights_path") or ""),
+            asset_count=int(item.get("asset_count") or 0),
+        )
+        for item in payload.get("packages", [])
+    ]
+    return SocialBatch(
+        schema_version=int(payload["schema_version"]),
+        export_kind=str(payload["export_kind"]),
+        exported_at=str(payload["exported_at"]),
+        relative_dir=str(payload["relative_dir"]),
+        batch_dir=root,
+        batch_manifest_path=root / "batch.json",
+        run=_as_run_info(payload["run"]),
+        article_count=int(payload["article_count"]),
+        packages=package_refs,
+        status_contract=dict(payload.get("status_contract", {})),
+    )
+
+
+def load_batch_from_payload(payload: dict, batch_dir: str | Path) -> SocialBatch:
+    return _batch_from_payload(payload, Path(batch_dir))
+
+
 def validate_package_dir(package_dir: str | Path) -> list[str]:
     root = Path(package_dir)
     errors: list[str] = []
@@ -333,24 +393,14 @@ def validate_batch_dir(batch_dir: str | Path) -> list[str]:
         batch_payload = _read_json(batch_manifest)
     except json.JSONDecodeError as exc:
         return [f"Invalid JSON: {exc}"]
+    payload_errors = _validate_batch_manifest_payload(batch_payload)
+    if payload_errors:
+        return payload_errors
 
-    missing_fields = _missing_fields(batch_payload, BATCH_REQUIRED_FIELDS)
-    if missing_fields:
-        errors.append(f"batch.json missing fields: {', '.join(missing_fields)}")
-        return errors
-
-    packages = batch_payload.get("packages")
-    if not isinstance(packages, list):
-        return ["batch.json packages must be a list"]
-
-    if int(batch_payload.get("article_count") or 0) != len(packages):
-        errors.append("batch.json article_count does not match packages length")
+    packages = batch_payload.get("packages", [])
 
     for package_ref in packages:
         package_dir_rel = package_ref.get("package_dir")
-        if not package_dir_rel:
-            errors.append("batch.json package entry missing package_dir")
-            continue
         package_path = root / str(package_dir_rel)
         if not package_path.exists():
             errors.append(f"Missing package directory from batch manifest: {package_dir_rel}")
@@ -367,31 +417,7 @@ def load_batch(batch_dir: str | Path) -> SocialBatch:
         raise ValueError("; ".join(errors))
 
     payload = _read_json(root / "batch.json")
-    package_refs = [
-        BatchPackageRef(
-            article_idxno=int(item.get("article_idxno") or 0),
-            headline=str(item.get("headline") or ""),
-            change_type=str(item.get("change_type") or ""),
-            package_dir=str(item.get("package_dir") or ""),
-            package_path=str(item.get("package_path") or ""),
-            article_json_path=str(item.get("article_json_path") or ""),
-            rights_path=str(item.get("rights_path") or ""),
-            asset_count=int(item.get("asset_count") or 0),
-        )
-        for item in payload.get("packages", [])
-    ]
-    return SocialBatch(
-        schema_version=int(payload["schema_version"]),
-        export_kind=str(payload["export_kind"]),
-        exported_at=str(payload["exported_at"]),
-        relative_dir=str(payload["relative_dir"]),
-        batch_dir=root,
-        batch_manifest_path=root / "batch.json",
-        run=_as_run_info(payload["run"]),
-        article_count=int(payload["article_count"]),
-        packages=package_refs,
-        status_contract=dict(payload.get("status_contract", {})),
-    )
+    return _batch_from_payload(payload, root)
 
 
 def validate_notification_file(

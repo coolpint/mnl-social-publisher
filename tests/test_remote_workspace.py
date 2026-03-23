@@ -16,6 +16,7 @@ FIXTURE_INBOX_ROOT = Path(__file__).parent / "fixtures" / "social_inbox"
 class FakeRemoteClient:
     def __init__(self) -> None:
         self.files: dict[str, bytes] = {}
+        self.read_calls: list[str] = []
 
     def exists(self, remote_path: str) -> bool:
         remote_path = _clean(remote_path)
@@ -40,7 +41,9 @@ class FakeRemoteClient:
         return [FakeEntry(name=name, is_folder=is_folder) for name, is_folder in seen.items()]
 
     def read_bytes(self, remote_path: str) -> bytes:
-        return self.files[_clean(remote_path)]
+        cleaned = _clean(remote_path)
+        self.read_calls.append(cleaned)
+        return self.files[cleaned]
 
     def write_bytes(self, remote_path: str, data: bytes) -> dict[str, object]:
         self.files[_clean(remote_path)] = data
@@ -101,6 +104,21 @@ class RemoteWorkspaceTestCase(unittest.TestCase):
         workspace = RemoteWorkspace(settings, client)
         workspace._fake_client = client  # type: ignore[attr-defined]
         return workspace
+
+    def test_remote_workspace_lists_recent_batches_from_batch_manifest_only(self) -> None:
+        workspace = self._build_workspace()
+        client = workspace._fake_client  # type: ignore[attr-defined]
+        client.files = {
+            path: payload
+            for path, payload in client.files.items()
+            if path.endswith("batch.json")
+        }
+
+        batches = workspace.list_recent_batches(limit=5)
+
+        self.assertEqual(len(batches), 1)
+        self.assertEqual(batches[0].relative_dir, "2026/03/14/run-000123")
+        self.assertEqual(client.read_calls, ["social/inbox/2026/03/14/run-000123/batch.json"])
 
     def test_remote_workspace_builds_review_and_publish_requests(self) -> None:
         workspace = self._build_workspace()

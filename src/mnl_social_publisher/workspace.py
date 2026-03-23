@@ -9,7 +9,7 @@ from .approval_inputs import ApprovalSubmission
 from .approval_stores import LocalJsonApprovalStore, RemoteJsonApprovalStore
 from .models import SocialBatch, SocialPackage
 from .onedrive import OneDriveClient, OneDriveConfig
-from .package_loader import load_batch, load_package
+from .package_loader import load_batch, load_batch_from_payload, load_package
 from .platforms import review_draft_filename
 from .publishers.requests import create_publish_requests
 from .review_builds import build_review_all_batch
@@ -306,15 +306,13 @@ class RemoteWorkspace(BaseWorkspace):
         batches: list[SocialBatch] = []
         for relative_dir in relative_dirs:
             try:
-                batches.append(self.load_batch(relative_dir))
+                batches.append(self._load_remote_batch_manifest(relative_dir))
             except Exception:
                 continue
         return batches
 
     def load_batch(self, relative_dir: str) -> SocialBatch:
-        with tempfile.TemporaryDirectory(prefix="mnl-social-remote-batch-") as temp_dir:
-            batch_root = self._hydrate_batch(relative_dir, Path(temp_dir))
-            return load_batch(batch_root)
+        return self._load_remote_batch_manifest(relative_dir)
 
     def load_package(self, relative_dir: str, package_id: str) -> SocialPackage:
         with tempfile.TemporaryDirectory(prefix="mnl-social-remote-package-") as temp_dir:
@@ -471,6 +469,11 @@ class RemoteWorkspace(BaseWorkspace):
                 continue
             self._hydrate_package(relative_dir, package_id, batch_root / package_id)
         return batch_root
+
+    def _load_remote_batch_manifest(self, relative_dir: str) -> SocialBatch:
+        remote_path = _join_remote(self.inbox_root, relative_dir, "batch.json")
+        payload = json.loads(self.client.read_bytes(remote_path).decode("utf-8"))
+        return load_batch_from_payload(payload, Path(relative_dir))
 
     def _hydrate_package(self, relative_dir: str, package_id: str, package_root: Path) -> None:
         package_root.mkdir(parents=True, exist_ok=True)
