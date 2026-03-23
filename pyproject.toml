@@ -19,9 +19,11 @@ mnl-social-publisher = "mnl_social_publisher.cli:main"
 [tool.setuptools]
 package-dir = {"" = "src"}
 
+[tool.setuptools.package-data]
+"mnl_social_publisher" = ["prompts/**/*.txt"]
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-

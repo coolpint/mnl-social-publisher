@@ -1,0 +1,6 @@
+{hook}
+{point_1}
+{point_2}
+{point_3}
+{context_line}
+기사 원문 재가공과 사실관계 검수 후 게시합니다.

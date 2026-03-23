@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 
@@ -15,6 +16,8 @@ YOUTUBE_ARTIFACT_FILENAMES = {
         "youtube_title.txt",
         "youtube_description.txt",
         "youtube_script.txt",
+        "youtube_storyboard.txt",
+        "youtube_scenes.json",
     ]
 }
 
@@ -56,6 +59,49 @@ def _render_youtube_script_artifact(draft: dict) -> str:
     return "\n".join(lines).strip() + "\n"
 
 
+def _render_youtube_storyboard_artifact(draft: dict) -> str:
+    lines = [
+        f"Title: {draft['title']}",
+        f"Thumbnail: {draft.get('thumbnail_headline', '')} / {draft.get('thumbnail_subheadline', '')}",
+        f"Total Duration: {draft.get('total_duration_seconds', 0)}s",
+        "",
+        "Scenes:",
+    ]
+    for scene in draft.get("scenes", []):
+        lines.extend(
+            [
+                f"{scene['sequence']}. [{scene['cue_label']}] {scene['duration_seconds']}s",
+                f"   Narration: {scene['narration']}",
+                f"   Overlay: {scene['overlay_text']}",
+                f"   Visual: {scene['visual_direction']}",
+                f"   Asset: {scene.get('asset_path') or '-'}",
+            ]
+        )
+    lines.extend(
+        [
+            "",
+            f"Script Template: {draft.get('script_prompt_template', '')}",
+            f"Description Template: {draft.get('description_prompt_template', '')}",
+        ]
+    )
+    return "\n".join(lines).strip() + "\n"
+
+
+def _render_youtube_scenes_json_artifact(draft: dict) -> str:
+    payload = {
+        "package_id": draft["package_id"],
+        "article_idxno": draft["article_idxno"],
+        "title": draft["title"],
+        "total_duration_seconds": draft.get("total_duration_seconds", 0),
+        "thumbnail": {
+            "headline": draft.get("thumbnail_headline", ""),
+            "subheadline": draft.get("thumbnail_subheadline", ""),
+        },
+        "scenes": draft.get("scenes", []),
+    }
+    return json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
+
+
 def write_review_artifacts(
     platform: str,
     draft: dict,
@@ -77,6 +123,8 @@ def write_review_artifacts(
             "youtube_title.txt": _render_youtube_title_artifact(draft),
             "youtube_description.txt": _render_youtube_description_artifact(draft),
             "youtube_script.txt": _render_youtube_script_artifact(draft),
+            "youtube_storyboard.txt": _render_youtube_storyboard_artifact(draft),
+            "youtube_scenes.json": _render_youtube_scenes_json_artifact(draft),
         }
         for filename, content in rendered.items():
             artifact_path = output_path / filename

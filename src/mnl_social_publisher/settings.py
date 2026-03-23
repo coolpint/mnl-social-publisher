@@ -18,6 +18,8 @@ class Settings:
     approval_remote_root: str | None = None
     outbox_remote_root: str | None = None
     status_remote_root: str | None = None
+    notify_teams_webhook_url: str | None = None
+    notify_slack_webhook_url: str | None = None
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -39,9 +41,20 @@ class Settings:
             approval_remote_root=_clean_remote_root(os.getenv("MNL_SOCIAL_APPROVAL_REMOTE_ROOT")),
             outbox_remote_root=_clean_remote_root(os.getenv("MNL_SOCIAL_OUTBOX_REMOTE_ROOT")),
             status_remote_root=_clean_remote_root(os.getenv("MNL_SOCIAL_STATUS_REMOTE_ROOT")),
+            notify_teams_webhook_url=_clean_optional_url(
+                os.getenv("MNL_SOCIAL_NOTIFY_TEAMS_WEBHOOK_URL")
+            ),
+            notify_slack_webhook_url=_clean_optional_url(
+                os.getenv("MNL_SOCIAL_NOTIFY_SLACK_WEBHOOK_URL")
+            ),
         )
 
 
 def _clean_remote_root(value: str | None) -> str | None:
     cleaned = (value or "").strip().strip("/")
+    return cleaned or None
+
+
+def _clean_optional_url(value: str | None) -> str | None:
+    cleaned = (value or "").strip()
     return cleaned or None

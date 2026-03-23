@@ -192,9 +192,26 @@ class YouTubeDraft:
     builder: str
     publisher: str
     source_canonical_url: str
+    scenes: list["YouTubeScene"] = field(default_factory=list)
+    total_duration_seconds: int = 0
+    thumbnail_headline: str = ""
+    thumbnail_subheadline: str = ""
+    script_prompt_template: str = ""
+    description_prompt_template: str = ""
 
     def to_dict(self) -> dict:
         return asdict(self)
+
+
+@dataclass(frozen=True)
+class YouTubeScene:
+    sequence: int
+    cue_label: str
+    duration_seconds: int
+    narration: str
+    overlay_text: str
+    visual_direction: str
+    asset_path: str = ""
 
 
 @dataclass(frozen=True)
@@ -214,6 +231,7 @@ class PlatformPostDraft:
     builder: str
     publisher: str
     source_canonical_url: str
+    prompt_template: str = ""
     notes: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:

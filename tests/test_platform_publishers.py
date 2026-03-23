@@ -53,6 +53,10 @@ class PlatformDraftAndPublisherTestCase(unittest.TestCase):
         self.assertEqual(payload["x"]["publisher"], "x_publisher")
         self.assertEqual(payload["threads"]["publisher"], "threads_publisher")
         self.assertEqual(payload["instagram"]["visual_mode"], "brand_reel_or_card_template_required")
+        self.assertEqual(payload["threads"]["prompt_template"], "builders/threads.txt")
+        self.assertEqual(payload["x"]["prompt_template"], "builders/x.txt")
+        self.assertEqual(payload["facebook"]["prompt_template"], "builders/facebook.txt")
+        self.assertEqual(payload["instagram"]["prompt_template"], "builders/instagram.txt")
 
     def test_build_review_batch_for_threads_and_x(self) -> None:
         batch = load_batch(FIXTURE_BATCH_DIR)

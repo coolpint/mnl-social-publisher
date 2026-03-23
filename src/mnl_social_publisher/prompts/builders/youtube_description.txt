@@ -1,0 +1,5 @@
+머니앤로 기사 기반 숏츠 초안입니다.
+자동 생성 결과물이며 업로드 전 검수가 필요합니다.
+{canonical_line}
+{author_line}
+{rights_line}

@@ -1,0 +1,3 @@
+{headline}
+- {point_1}
+- {point_2}

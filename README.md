@@ -35,6 +35,8 @@ Other channels now start from the same contract as separate builders and publish
 - `facebook`
 - `instagram`
 
+Builder copy is now externalized into prompt template files under `src/mnl_social_publisher/prompts`, so channel tone and phrasing can be tuned without reopening builder code.
+
 ## Package contract
 
 The expected input contract lives in [docs/package-contract.md](docs/package-contract.md).
@@ -169,6 +171,14 @@ PYTHONPATH=src python3 -m mnl_social_publisher serve-web --host 0.0.0.0 --port 8
 
 In `onedrive` mode the app reads `social/inbox`, writes `social/review`, `social/approval`, `social/outbox`, and `social/status` back to Microsoft Graph directly. A local SharePoint/OneDrive sync folder is not required. The current implementation stages files only in a temporary runtime workspace while each request is being processed; the system of record remains the remote drive.
 
+## Prompt and storyboard outputs
+
+- Text builders use prompt templates in `src/mnl_social_publisher/prompts/builders/`.
+- `youtube_shorts` now produces both a draft JSON and scene-level review artifacts:
+  - `youtube_storyboard.txt`
+  - `youtube_scenes.json`
+- The YouTube publish payload now includes scene timing and thumbnail text so a renderer or uploader can consume the same review draft directly.
+
 ## GitHub Actions
 
 This repository now ships with two workflows:
@@ -190,6 +200,13 @@ Supported manual operations:
 - `list_batches`
 - `build_review_all`
 - `queue_publish_requests`
+
+Optional notifier secrets for `remote-ops`:
+
+- `MNL_SOCIAL_NOTIFY_TEAMS_WEBHOOK_URL`
+- `MNL_SOCIAL_NOTIFY_SLACK_WEBHOOK_URL`
+
+When `notify=true`, the workflow sends a short operation summary after `build_review_all` or `queue_publish_requests`. Notification delivery is best-effort and does not fail the main job.
 
 The remote ops workflow targets these remote roots by default:
 

@@ -3,7 +3,9 @@ import tempfile
 import unittest
 
 from mnl_social_publisher.builders.youtube import build_youtube_draft
+from mnl_social_publisher.models import PublishJob
 from mnl_social_publisher.package_loader import load_batch, load_package
+from mnl_social_publisher.publishers.youtube import build_youtube_publish_request
 from mnl_social_publisher.review_builds import build_review_all_batch, build_youtube_review_batch
 
 
@@ -35,6 +37,11 @@ class YouTubeBuilderTestCase(unittest.TestCase):
         self.assertEqual(draft.blocked_asset_paths, ["assets/source-media/01.jpg"])
         self.assertTrue(draft.script_lines[0].startswith("플랫폼 규제 점검 강화"))
         self.assertIn("머니앤로", draft.tags)
+        self.assertEqual(draft.script_prompt_template, "builders/youtube_script.txt")
+        self.assertEqual(draft.description_prompt_template, "builders/youtube_description.txt")
+        self.assertEqual(len(draft.scenes), 6)
+        self.assertGreater(draft.total_duration_seconds, 35)
+        self.assertTrue(draft.thumbnail_headline)
 
     def test_build_youtube_review_batch_writes_review_outputs(self) -> None:
         batch = load_batch(FIXTURE_BATCH_DIR)
@@ -47,12 +54,16 @@ class YouTubeBuilderTestCase(unittest.TestCase):
             title_path = output_root / "article-000143" / "youtube_title.txt"
             description_path = output_root / "article-000143" / "youtube_description.txt"
             script_path = output_root / "article-000143" / "youtube_script.txt"
+            storyboard_path = output_root / "article-000143" / "youtube_storyboard.txt"
+            scenes_path = output_root / "article-000143" / "youtube_scenes.json"
             summary_path = output_root / "youtube_build.json"
 
             self.assertTrue(draft_path.exists())
             self.assertTrue(title_path.exists())
             self.assertTrue(description_path.exists())
             self.assertTrue(script_path.exists())
+            self.assertTrue(storyboard_path.exists())
+            self.assertTrue(scenes_path.exists())
             self.assertTrue(summary_path.exists())
             self.assertEqual(summary["article_count"], 1)
             self.assertEqual(summary["drafts"][0]["status"], "built")
@@ -62,6 +73,10 @@ class YouTubeBuilderTestCase(unittest.TestCase):
             )
             self.assertIn(
                 "2026/03/14/run-000123/article-000143/youtube_script.txt",
+                summary["drafts"][0]["artifact_paths"],
+            )
+            self.assertIn(
+                "2026/03/14/run-000123/article-000143/youtube_storyboard.txt",
                 summary["drafts"][0]["artifact_paths"],
             )
 
@@ -76,6 +91,36 @@ class YouTubeBuilderTestCase(unittest.TestCase):
             self.assertTrue((output_root / "article-000143" / "threads_post.txt").exists())
             self.assertTrue((output_root / "article-000143" / "x_post.txt").exists())
             self.assertEqual(summary["platform_count"], 5)
+
+    def test_youtube_publish_request_includes_scene_payload(self) -> None:
+        package = load_package(FIXTURE_PACKAGE_DIR)
+        draft = build_youtube_draft(package).to_dict()
+        job = PublishJob(
+            platform="youtube_shorts",
+            package_id=package.package_id,
+            article_idxno=package.article.idxno,
+            headline=package.article.headline,
+            publisher="youtube_publisher",
+            status="approved_for_publish",
+            reason="approved",
+            review_required=True,
+            ready_for_publish=True,
+            delivery_mode="private_review",
+            review_draft_path="social/review/2026/03/14/run-000123/article-000143/youtube_draft.json",
+            package_dir=str(package.package_dir),
+            source_canonical_url=package.article.canonical_url,
+            approval_path="social/approval/2026/03/14/run-000123/article-000143.json",
+            approval_status="approved",
+        )
+
+        request = build_youtube_publish_request(draft, job, "2026-03-23T00:00:00+00:00")
+
+        self.assertEqual(request.payload["total_duration_seconds"], draft["total_duration_seconds"])
+        self.assertEqual(len(request.payload["scenes"]), 6)
+        self.assertEqual(
+            request.payload["prompt_templates"]["script"],
+            "builders/youtube_script.txt",
+        )
 
 
 if __name__ == "__main__":

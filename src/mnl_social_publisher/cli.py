@@ -7,6 +7,7 @@ from pathlib import Path
 from .approval_loader import validate_approval_file
 from .builders.registry import get_platform_builder
 from .builders.youtube import build_youtube_draft
+from .notifiers import notify_operation_result
 from .package_loader import (
     load_batch,
     load_batch_from_notification,
@@ -53,12 +54,14 @@ def _build_parser() -> argparse.ArgumentParser:
     workspace_build_review_parser = subparsers.add_parser("workspace-build-review-all")
     workspace_build_review_parser.add_argument("--relative-dir")
     workspace_build_review_parser.add_argument("--latest", action="store_true")
+    workspace_build_review_parser.add_argument("--notify", action="store_true")
     workspace_build_review_parser.add_argument("--pretty", action="store_true")
 
     workspace_publish_parser = subparsers.add_parser("workspace-create-publish-requests")
     workspace_publish_parser.add_argument("platform", choices=supported_platforms())
     workspace_publish_parser.add_argument("--relative-dir")
     workspace_publish_parser.add_argument("--latest", action="store_true")
+    workspace_publish_parser.add_argument("--notify", action="store_true")
     workspace_publish_parser.add_argument("--pretty", action="store_true")
 
     youtube_parser = subparsers.add_parser("build-youtube")
@@ -248,6 +251,8 @@ def main(argv: list[str] | None = None) -> int:
         workspace = workspace_from_settings(settings)
         relative_dir = _resolve_workspace_relative_dir(workspace, args.relative_dir, args.latest)
         summary = workspace.build_review_all(relative_dir)
+        if args.notify:
+            summary["notification"] = notify_operation_result("build_review_all", summary, settings)
         print(_dump_json(summary, pretty=args.pretty))
         return 0
 
@@ -255,6 +260,12 @@ def main(argv: list[str] | None = None) -> int:
         workspace = workspace_from_settings(settings)
         relative_dir = _resolve_workspace_relative_dir(workspace, args.relative_dir, args.latest)
         summary = workspace.create_publish_requests(relative_dir, args.platform)
+        if args.notify:
+            summary["notification"] = notify_operation_result(
+                "queue_publish_requests",
+                summary,
+                settings,
+            )
         print(_dump_json(summary, pretty=args.pretty))
         return 0
 

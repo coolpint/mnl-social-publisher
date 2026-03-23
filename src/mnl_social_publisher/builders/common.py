@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 
+from ..prompt_templates import render_prompt_template
 from ..models import PlatformPostDraft, SocialPackage
 from ..platforms import get_platform_target
 
@@ -21,6 +22,20 @@ def story_points(package: SocialPackage, limit: int = 3) -> list[str]:
     if not points:
         points = [package.article.headline]
     return points[:limit]
+
+
+def padded_story_points(package: SocialPackage, limit: int = 3) -> list[str]:
+    points = story_points(package, limit=limit)
+    fallbacks = [
+        "세부 내용은 검수 후 보완합니다.",
+        "관련 맥락은 원문 기준으로 다시 확인합니다.",
+        "표현 수위와 사실관계는 업로드 전 다시 점검합니다.",
+    ]
+    filled = list(points)
+    while len(filled) < limit:
+        fallback = fallbacks[len(filled)] if len(filled) < len(fallbacks) else package.article.headline
+        filled.append(fallback)
+    return filled[:limit]
 
 
 def trim_text(text: str, limit: int) -> str:
@@ -84,6 +99,7 @@ def build_post_draft(
     text: str,
     hashtags: list[str],
     visual_mode: str,
+    prompt_template: str = "",
     notes: list[str] | None = None,
 ) -> PlatformPostDraft:
     target = get_platform_target(package, platform)
@@ -107,5 +123,10 @@ def build_post_draft(
         builder=target.builder,
         publisher=target.publisher,
         source_canonical_url=package.article.canonical_url,
+        prompt_template=prompt_template,
         notes=all_notes,
     )
+
+
+def render_post_template(template_name: str, **context: object) -> str:
+    return render_prompt_template(template_name, **context).strip()

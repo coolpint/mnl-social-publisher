@@ -76,6 +76,17 @@ class WorkspaceCliTestCase(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertEqual(workspace.last_build_relative_dir, "2026/03/22/run-000321")
 
+    def test_workspace_build_review_all_can_notify(self) -> None:
+        workspace = FakeWorkspace()
+        with patch("mnl_social_publisher.cli.workspace_from_settings", return_value=workspace), patch(
+            "mnl_social_publisher.cli.notify_operation_result",
+            return_value={"status": "completed", "sent_count": 1},
+        ) as mocked_notify, patch("builtins.print"):
+            exit_code = cli.main(["workspace-build-review-all", "--notify", "--pretty"])
+
+        self.assertEqual(exit_code, 0)
+        mocked_notify.assert_called_once()
+
     def test_workspace_create_publish_requests_defaults_to_latest_batch(self) -> None:
         workspace = FakeWorkspace()
         with patch("mnl_social_publisher.cli.workspace_from_settings", return_value=workspace), patch(
@@ -86,6 +97,19 @@ class WorkspaceCliTestCase(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertEqual(workspace.last_publish_relative_dir, "2026/03/22/run-000321")
         self.assertEqual(workspace.last_publish_platform, "threads")
+
+    def test_workspace_create_publish_requests_can_notify(self) -> None:
+        workspace = FakeWorkspace()
+        with patch("mnl_social_publisher.cli.workspace_from_settings", return_value=workspace), patch(
+            "mnl_social_publisher.cli.notify_operation_result",
+            return_value={"status": "completed", "sent_count": 1},
+        ) as mocked_notify, patch("builtins.print"):
+            exit_code = cli.main(
+                ["workspace-create-publish-requests", "threads", "--notify", "--pretty"]
+            )
+
+        self.assertEqual(exit_code, 0)
+        mocked_notify.assert_called_once()
 
 
 if __name__ == "__main__":

@@ -1,0 +1,8 @@
+[mnl-social-publisher]
+작업: {operation_label}
+배치: {relative_dir}
+플랫폼: {platform_label}
+결과: {result_line}
+검수 대상 기사 수: {review_count}
+발행 요청 수: {request_count}
+생성 시각(UTC): {generated_at}

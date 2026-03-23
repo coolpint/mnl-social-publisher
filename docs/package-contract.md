@@ -151,6 +151,8 @@ social/review/YYYY/MM/DD/run-000123/
     youtube_title.txt
     youtube_description.txt
     youtube_script.txt
+    youtube_storyboard.txt
+    youtube_scenes.json
     threads_draft.json
     threads_post.txt
     x_draft.json
@@ -160,6 +162,8 @@ social/review/YYYY/MM/DD/run-000123/
     instagram_draft.json
     instagram_caption.txt
 ```
+
+Text drafts also record which prompt template produced the current copy, and YouTube drafts now include scene timing plus thumbnail text so a downstream renderer can work from the review package alone.
 
 Example approval target:
 

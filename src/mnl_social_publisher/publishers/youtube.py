@@ -14,6 +14,16 @@ def build_youtube_publish_request(
         "privacy_status": draft["privacy_status"],
         "tags": draft["tags"],
         "script_lines": draft["script_lines"],
+        "scenes": draft.get("scenes", []),
+        "total_duration_seconds": draft.get("total_duration_seconds", 0),
+        "thumbnail": {
+            "headline": draft.get("thumbnail_headline", ""),
+            "subheadline": draft.get("thumbnail_subheadline", ""),
+        },
+        "prompt_templates": {
+            "script": draft.get("script_prompt_template", ""),
+            "description": draft.get("description_prompt_template", ""),
+        },
         "visuals_mode": draft["visuals_mode"],
         "approved_asset_paths": draft["approved_asset_paths"],
     }
