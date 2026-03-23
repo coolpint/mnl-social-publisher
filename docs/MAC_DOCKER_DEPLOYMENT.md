@@ -44,6 +44,11 @@ Then fill in:
 - `MNL_SOCIAL_WEB_BASIC_AUTH_USERNAME`
 - `MNL_SOCIAL_WEB_BASIC_AUTH_PASSWORD`
 
+Choose how the web port should be exposed:
+
+- `MNL_SOCIAL_BIND_HOST=127.0.0.1` keeps it local to the Mac only
+- `MNL_SOCIAL_BIND_HOST=0.0.0.0` makes it reachable from the same LAN, for example `http://<mac-ip>:8420`
+
 The default remote roots already point to:
 
 - `social/inbox`
@@ -120,7 +125,8 @@ Open the served URL from another device that is already inside the same tailnet.
 
 ## Notes
 
-- the container binds only to `127.0.0.1`, not the public network
-- Tailscale is the intended access path
+- the default bind host is `127.0.0.1`
+- if you set `MNL_SOCIAL_BIND_HOST=0.0.0.0`, devices on the same local network can open `http://<mac-ip>:8420`
+- Tailscale is still the cleaner long-term access path when you want access outside the local network
 - `restart: unless-stopped` keeps the container running after Docker restarts
 - `launchd` makes sure the stack comes back after Mac login or reboot

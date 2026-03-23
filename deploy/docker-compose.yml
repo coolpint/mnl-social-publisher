@@ -7,7 +7,7 @@ services:
     container_name: mnl-social-publisher
     restart: unless-stopped
     ports:
-      - "127.0.0.1:${PORT:-8420}:8420"
+      - "${MNL_SOCIAL_BIND_HOST:-127.0.0.1}:${PORT:-8420}:8420"
     env_file:
       - ./mnl-social-publisher.env
     healthcheck:
