@@ -1,4 +1,5 @@
 from io import BytesIO
+import base64
 import json
 from pathlib import Path
 import tempfile
@@ -35,6 +36,67 @@ def _invoke(app, method: str, path: str, query: dict | None = None, form: dict |
 
 
 class WebAppTestCase(unittest.TestCase):
+    def test_healthz_returns_ok_without_auth(self) -> None:
+        app = create_web_app(
+            Settings(
+                web_basic_auth_username="desk",
+                web_basic_auth_password="secret",
+            )
+        )
+
+        response, body = _invoke(app, "GET", "/healthz")
+
+        self.assertTrue(response["status"].startswith("200"))
+        self.assertEqual(body, "ok\n")
+
+    def test_dashboard_requires_basic_auth_when_configured(self) -> None:
+        app = create_web_app(
+            Settings(
+                inbox_root=FIXTURE_INBOX_ROOT,
+                web_basic_auth_username="desk",
+                web_basic_auth_password="secret",
+            )
+        )
+
+        response, body = _invoke(app, "GET", "/")
+
+        self.assertTrue(response["status"].startswith("401"))
+        self.assertIn("Authentication required", body)
+
+    def test_dashboard_allows_basic_auth_when_credentials_match(self) -> None:
+        with tempfile.TemporaryDirectory() as review_dir, tempfile.TemporaryDirectory() as approval_dir, tempfile.TemporaryDirectory() as outbox_dir, tempfile.TemporaryDirectory() as status_dir:
+            app = create_web_app(
+                Settings(
+                    inbox_root=FIXTURE_INBOX_ROOT,
+                    review_root=Path(review_dir),
+                    approval_root=Path(approval_dir),
+                    outbox_root=Path(outbox_dir),
+                    status_root=Path(status_dir),
+                    web_basic_auth_username="desk",
+                    web_basic_auth_password="secret",
+                )
+            )
+            token = base64.b64encode(b"desk:secret").decode("ascii")
+            environ = {}
+            setup_testing_defaults(environ)
+            environ["REQUEST_METHOD"] = "GET"
+            environ["PATH_INFO"] = "/"
+            environ["QUERY_STRING"] = ""
+            environ["HTTP_AUTHORIZATION"] = f"Basic {token}"
+            environ["CONTENT_LENGTH"] = "0"
+            environ["wsgi.input"] = BytesIO(b"")
+
+            result = {}
+
+            def start_response(status, headers):
+                result["status"] = status
+                result["headers"] = headers
+
+            body = b"".join(app(environ, start_response)).decode("utf-8")
+
+            self.assertTrue(result["status"].startswith("200"))
+            self.assertIn("Money & Law Social Desk", body)
+
     def test_dashboard_renders_batch_link(self) -> None:
         with tempfile.TemporaryDirectory() as review_dir, tempfile.TemporaryDirectory() as approval_dir, tempfile.TemporaryDirectory() as outbox_dir, tempfile.TemporaryDirectory() as status_dir:
             app = create_web_app(

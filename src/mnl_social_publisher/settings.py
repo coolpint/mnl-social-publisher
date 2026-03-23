@@ -20,6 +20,8 @@ class Settings:
     status_remote_root: str | None = None
     notify_teams_webhook_url: str | None = None
     notify_slack_webhook_url: str | None = None
+    web_basic_auth_username: str | None = None
+    web_basic_auth_password: str | None = None
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -47,6 +49,12 @@ class Settings:
             notify_slack_webhook_url=_clean_optional_url(
                 os.getenv("MNL_SOCIAL_NOTIFY_SLACK_WEBHOOK_URL")
             ),
+            web_basic_auth_username=_clean_optional_value(
+                os.getenv("MNL_SOCIAL_WEB_BASIC_AUTH_USERNAME")
+            ),
+            web_basic_auth_password=_clean_optional_value(
+                os.getenv("MNL_SOCIAL_WEB_BASIC_AUTH_PASSWORD")
+            ),
         )
 
 
@@ -56,5 +64,10 @@ def _clean_remote_root(value: str | None) -> str | None:
 
 
 def _clean_optional_url(value: str | None) -> str | None:
+    cleaned = (value or "").strip()
+    return cleaned or None
+
+
+def _clean_optional_value(value: str | None) -> str | None:
     cleaned = (value or "").strip()
     return cleaned or None

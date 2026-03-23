@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 from html import escape
 from urllib.parse import parse_qs, urlencode
 from wsgiref.simple_server import make_server
@@ -236,6 +237,12 @@ class SocialDeskApp:
         method = environ.get("REQUEST_METHOD", "GET").upper()
         path = environ.get("PATH_INFO", "/")
 
+        if method == "GET" and path == "/healthz":
+            return self._text_response(start_response, "ok\n")
+
+        if not self._is_authorized(environ):
+            return self._unauthorized_response(start_response)
+
         try:
             if method == "GET" and path == "/":
                 return self._html_response(start_response, self._dashboard_page(environ))
@@ -284,6 +291,17 @@ class SocialDeskApp:
         start_response("303 See Other", [("Location", location)])
         return [b""]
 
+    def _text_response(self, start_response, body: str, status: str = "200 OK"):
+        payload = body.encode("utf-8")
+        start_response(
+            status,
+            [
+                ("Content-Type", "text/plain; charset=utf-8"),
+                ("Content-Length", str(len(payload))),
+            ],
+        )
+        return [payload]
+
     def _html_response(self, start_response, html: str, status: str = "200 OK"):
         payload = html.encode("utf-8")
         start_response(
@@ -294,6 +312,41 @@ class SocialDeskApp:
             ],
         )
         return [payload]
+
+    def _is_authorized(self, environ) -> bool:
+        username = self.settings.web_basic_auth_username or ""
+        password = self.settings.web_basic_auth_password or ""
+        if not username or not password:
+            return True
+
+        header = environ.get("HTTP_AUTHORIZATION", "")
+        if not header.startswith("Basic "):
+            return False
+
+        token = header[6:].strip()
+        if not token:
+            return False
+        try:
+            decoded = base64.b64decode(token).decode("utf-8")
+        except Exception:
+            return False
+
+        submitted_username, separator, submitted_password = decoded.partition(":")
+        if not separator:
+            return False
+        return submitted_username == username and submitted_password == password
+
+    def _unauthorized_response(self, start_response):
+        body = "Authentication required\n".encode("utf-8")
+        start_response(
+            "401 Unauthorized",
+            [
+                ("Content-Type", "text/plain; charset=utf-8"),
+                ("Content-Length", str(len(body))),
+                ("WWW-Authenticate", 'Basic realm="Money & Law Social Desk"'),
+            ],
+        )
+        return [body]
 
     def _layout(self, title: str, body: str, current: str = "home", flash: str = "") -> str:
         flash_markup = f"<div class='flash'>{escape(flash)}</div>" if flash else ""

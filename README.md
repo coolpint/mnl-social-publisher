@@ -213,6 +213,8 @@ This repository now ships with two workflows:
   Runs the unit test suite on every push to `main` and on pull requests.
 - `.github/workflows/mnl-social-publisher-remote-ops.yml`
   Lets an operator manually run remote OneDrive-backed jobs from the Actions tab.
+- `.github/workflows/mnl-social-publisher-web-image.yml`
+  Builds and publishes a container image to GHCR on every push to `main`.
 
 The remote ops workflow uses the same Microsoft Graph secrets as `mnl-backup`:
 
@@ -247,3 +249,32 @@ The remote ops workflow targets these remote roots by default:
 - `social/approval`
 - `social/outbox`
 - `social/status`
+
+## Remote web deployment
+
+The web UI is now packaged for remote deployment as a containerized WSGI app.
+
+- Container entrypoint:
+  `gunicorn mnl_social_publisher.wsgi:app`
+- Health check:
+  `GET /healthz`
+- Optional protection:
+  `MNL_SOCIAL_WEB_BASIC_AUTH_USERNAME`
+  `MNL_SOCIAL_WEB_BASIC_AUTH_PASSWORD`
+
+Required runtime environment for the remote app:
+
+- `MNL_SOCIAL_STORAGE_BACKEND=onedrive`
+- `MNL_SOCIAL_INBOX_REMOTE_ROOT=social/inbox`
+- `MNL_SOCIAL_REVIEW_REMOTE_ROOT=social/review`
+- `MNL_SOCIAL_APPROVAL_REMOTE_ROOT=social/approval`
+- `MNL_SOCIAL_OUTBOX_REMOTE_ROOT=social/outbox`
+- `MNL_SOCIAL_STATUS_REMOTE_ROOT=social/status`
+- `MNL_ONEDRIVE_TENANT_ID`
+- `MNL_ONEDRIVE_CLIENT_ID`
+- `MNL_ONEDRIVE_CLIENT_SECRET`
+- `MNL_ONEDRIVE_DRIVE_ID`
+
+The image workflow publishes to `ghcr.io/<owner>/mnl-social-publisher`. A hosting platform only needs to run that image with the environment above.
+
+See [docs/REMOTE_WEB_UI.md](docs/REMOTE_WEB_UI.md) for the rollout checklist.
