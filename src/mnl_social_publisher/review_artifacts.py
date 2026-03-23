@@ -31,6 +31,8 @@ def artifact_filenames(platform: str) -> list[str]:
 def _render_text_platform_artifact(platform: str, draft: dict) -> str:
     lines = [
         f"Headline: {draft['headline']}",
+        f"Profile: {draft.get('profile_id', '')} v{draft.get('profile_version', 0)}",
+        f"Prompt Template: {draft.get('prompt_template', '')}",
         "",
         draft["text"],
         "",
@@ -62,6 +64,7 @@ def _render_youtube_script_artifact(draft: dict) -> str:
 def _render_youtube_storyboard_artifact(draft: dict) -> str:
     lines = [
         f"Title: {draft['title']}",
+        f"Profile: {draft.get('profile_id', '')} v{draft.get('profile_version', 0)}",
         f"Thumbnail: {draft.get('thumbnail_headline', '')} / {draft.get('thumbnail_subheadline', '')}",
         f"Total Duration: {draft.get('total_duration_seconds', 0)}s",
         "",

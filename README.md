@@ -35,7 +35,7 @@ Other channels now start from the same contract as separate builders and publish
 - `facebook`
 - `instagram`
 
-Builder copy is now externalized into prompt template files under `src/mnl_social_publisher/prompts`, so channel tone and phrasing can be tuned without reopening builder code.
+Builder copy is now externalized into prompt template files under `src/mnl_social_publisher/prompts`, and platform strategy now lives in generation profiles under `src/mnl_social_publisher/profiles/platforms`, so tone, length, scene shape, and hashtag behavior can be tuned without reopening builder code.
 Approval input is now split into separate modules as well:
 
 - `src/mnl_social_publisher/approval_inputs.py`
@@ -182,10 +182,28 @@ Those remote roots are Graph app-folder relative paths. In SharePoint they typic
 ## Prompt and storyboard outputs
 
 - Text builders use prompt templates in `src/mnl_social_publisher/prompts/builders/`.
+- Platform strategy profiles live in `src/mnl_social_publisher/profiles/platforms/`.
 - `youtube_shorts` now produces both a draft JSON and scene-level review artifacts:
   - `youtube_storyboard.txt`
   - `youtube_scenes.json`
 - The YouTube publish payload now includes scene timing and thumbnail text so a renderer or uploader can consume the same review draft directly.
+- Review artifacts and publish requests also carry the profile and prompt metadata that produced the draft.
+
+### Tuning surfaces
+
+- Prompt templates:
+  editing wording and copy structure in `src/mnl_social_publisher/prompts/`
+- Generation profiles:
+  editing platform-specific strategy such as story point limits, title suffixes, scene timing, character caps, and fallback visual modes in `src/mnl_social_publisher/profiles/platforms/`
+- Approval input:
+  editing how decisions enter the system in `src/mnl_social_publisher/approval_inputs.py`
+- Approval storage:
+  editing where decisions are saved in `src/mnl_social_publisher/approval_stores.py`
+
+Optional override roots for local experiments:
+
+- `MNL_SOCIAL_TEMPLATE_ROOT`
+- `MNL_SOCIAL_PROFILE_ROOT`
 
 ## GitHub Actions
 
@@ -218,7 +236,8 @@ When `notify=true`, the workflow sends a short operation summary after `build_re
 
 ## Next Tuning Surface
 
-- Content generation quality can be tuned at the prompt-template layer under `src/mnl_social_publisher/prompts/`.
+- Content generation quality can now be tuned at two layers:
+  prompt templates under `src/mnl_social_publisher/prompts/` and platform strategy profiles under `src/mnl_social_publisher/profiles/platforms/`.
 - Approval collection can be tuned independently at the input/store layer without changing publisher logic.
 
 The remote ops workflow targets these remote roots by default:

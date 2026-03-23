@@ -24,6 +24,10 @@ def build_youtube_publish_request(
             "script": draft.get("script_prompt_template", ""),
             "description": draft.get("description_prompt_template", ""),
         },
+        "profile": {
+            "id": draft.get("profile_id", ""),
+            "version": draft.get("profile_version", 0),
+        },
         "visuals_mode": draft["visuals_mode"],
         "approved_asset_paths": draft["approved_asset_paths"],
     }

@@ -57,6 +57,10 @@ class PlatformDraftAndPublisherTestCase(unittest.TestCase):
         self.assertEqual(payload["x"]["prompt_template"], "builders/x.txt")
         self.assertEqual(payload["facebook"]["prompt_template"], "builders/facebook.txt")
         self.assertEqual(payload["instagram"]["prompt_template"], "builders/instagram.txt")
+        self.assertEqual(payload["threads"]["profile_id"], "threads-issue-brief-v1")
+        self.assertEqual(payload["x"]["profile_id"], "x-fast-news-v1")
+        self.assertEqual(payload["facebook"]["profile_id"], "facebook-explainer-v1")
+        self.assertEqual(payload["instagram"]["profile_id"], "instagram-saveable-brief-v1")
 
     def test_build_review_batch_for_threads_and_x(self) -> None:
         batch = load_batch(FIXTURE_BATCH_DIR)
@@ -160,9 +164,13 @@ class PlatformDraftAndPublisherTestCase(unittest.TestCase):
             self.assertTrue((status_base / "article-000143.json").exists())
             self.assertEqual(summary["request_count"], 1)
             self.assertEqual(summary["requests"][0]["status"], "queued_in_outbox")
+            outbox_payload = json.loads(
+                (outbox_base / "article-000143.json").read_text(encoding="utf-8")
+            )
             article_status_payload = json.loads(
                 (status_base / "article-000143.json").read_text(encoding="utf-8")
             )
+            self.assertEqual(outbox_payload["payload"]["profile"]["id"], "threads-issue-brief-v1")
             self.assertEqual(article_status_payload["state"], "publishing")
 
     def test_create_publish_requests_skips_rejected_platform(self) -> None:

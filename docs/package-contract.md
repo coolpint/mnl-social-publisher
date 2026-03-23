@@ -163,7 +163,7 @@ social/review/YYYY/MM/DD/run-000123/
     instagram_caption.txt
 ```
 
-Text drafts also record which prompt template produced the current copy, and YouTube drafts now include scene timing plus thumbnail text so a downstream renderer can work from the review package alone.
+Text drafts also record which generation profile and prompt template produced the current copy, and YouTube drafts now include profile metadata, scene timing, and thumbnail text so a downstream renderer can work from the review package alone.
 
 Example approval target:
 
@@ -209,3 +209,16 @@ social/status/threads/YYYY/MM/DD/run-000123/
 ```
 
 Status files are produced by the publisher layer and are separate from both the immutable inbox package and the review drafts.
+
+## Builder modularity
+
+Content generation is intentionally split into separate change surfaces:
+
+- prompt templates:
+  the wording skeleton for each platform
+- generation profiles:
+  the platform-specific strategy such as title limits, scene timing, hashtag defaults, and fallback visual modes
+- approval inputs and stores:
+  the way editors submit decisions and the way those decisions are persisted
+
+This lets operators tune output quality without reopening the publisher execution flow or status-writing logic.

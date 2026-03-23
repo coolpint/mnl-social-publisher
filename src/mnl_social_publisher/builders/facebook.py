@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from .common import (
-    base_hashtags,
     build_post_draft,
+    base_hashtags,
+    load_platform_profile,
     padded_story_points,
     render_post_template,
     text_visual_mode,
@@ -11,10 +12,11 @@ from ..models import PlatformPostDraft, SocialPackage
 
 
 def build_facebook_draft(package: SocialPackage) -> PlatformPostDraft:
-    prompt_template = "builders/facebook.txt"
-    points = padded_story_points(package, limit=3)
-    visual_mode, _, _ = text_visual_mode(package, "brand_square_summary_card")
-    hashtags = base_hashtags(package, extra=["이슈정리"])
+    profile = load_platform_profile("facebook")
+    prompt_template = profile.prompt_template
+    points = padded_story_points(package, limit=profile.story_point_limit)
+    visual_mode, _, _ = text_visual_mode(package, profile.visual_mode_fallback)
+    hashtags = base_hashtags(package, extra=profile.extra_hashtags)
     text = render_post_template(
         prompt_template,
         headline=package.article.headline,
@@ -28,6 +30,8 @@ def build_facebook_draft(package: SocialPackage) -> PlatformPostDraft:
         text=text,
         hashtags=hashtags[:4],
         visual_mode=visual_mode,
+        profile_id=profile.profile_id,
+        profile_version=profile.version,
         prompt_template=prompt_template,
-        notes=["Facebook용 설명형 포스트 초안입니다."],
+        notes=profile.notes,
     )

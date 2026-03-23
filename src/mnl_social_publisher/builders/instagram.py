@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from .common import (
-    base_hashtags,
     build_post_draft,
+    base_hashtags,
+    load_platform_profile,
     padded_story_points,
     render_post_template,
     text_visual_mode,
@@ -11,10 +12,11 @@ from ..models import PlatformPostDraft, SocialPackage
 
 
 def build_instagram_draft(package: SocialPackage) -> PlatformPostDraft:
-    prompt_template = "builders/instagram.txt"
-    points = padded_story_points(package, limit=3)
-    visual_mode, _, _ = text_visual_mode(package, "brand_reel_or_card_template_required")
-    hashtags = base_hashtags(package, extra=["인사이트", "오늘의이슈"])
+    profile = load_platform_profile("instagram")
+    prompt_template = profile.prompt_template
+    points = padded_story_points(package, limit=profile.story_point_limit)
+    visual_mode, _, _ = text_visual_mode(package, profile.visual_mode_fallback)
+    hashtags = base_hashtags(package, extra=profile.extra_hashtags)
     text = render_post_template(
         prompt_template,
         headline=package.article.headline,
@@ -29,6 +31,8 @@ def build_instagram_draft(package: SocialPackage) -> PlatformPostDraft:
         text=text,
         hashtags=hashtags[:5],
         visual_mode=visual_mode,
+        profile_id=profile.profile_id,
+        profile_version=profile.version,
         prompt_template=prompt_template,
-        notes=["Instagram용 캡션 초안입니다."],
+        notes=profile.notes,
     )

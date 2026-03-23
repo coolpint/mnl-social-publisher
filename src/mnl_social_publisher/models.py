@@ -205,6 +205,8 @@ class YouTubeDraft:
     builder: str
     publisher: str
     source_canonical_url: str
+    profile_id: str = ""
+    profile_version: int = 0
     scenes: list["YouTubeScene"] = field(default_factory=list)
     total_duration_seconds: int = 0
     thumbnail_headline: str = ""
@@ -244,6 +246,8 @@ class PlatformPostDraft:
     builder: str
     publisher: str
     source_canonical_url: str
+    profile_id: str = ""
+    profile_version: int = 0
     prompt_template: str = ""
     notes: list[str] = field(default_factory=list)
 

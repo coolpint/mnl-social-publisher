@@ -1,0 +1,16 @@
+{
+  "platform": "x",
+  "profile_id": "x-fast-news-v1",
+  "version": 1,
+  "prompt_template": "builders/x.txt",
+  "story_point_limit": 2,
+  "character_limit": 260,
+  "visual_mode_fallback": "text_only_link_post",
+  "extra_hashtags": [],
+  "notes": ["X용 짧은 확산 초안입니다. 링크는 게시 단계에서 붙일 수 있습니다."],
+  "inspiration_patterns": [
+    "제목 뒤에 핵심 포인트를 2줄 안에 정리한다.",
+    "문장보다 불릿형 압축이 우선이다.",
+    "링크 또는 후속 스레드는 게시 단계에서 붙인다."
+  ]
+}

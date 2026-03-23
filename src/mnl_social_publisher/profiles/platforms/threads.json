@@ -1,0 +1,16 @@
+{
+  "platform": "threads",
+  "profile_id": "threads-issue-brief-v1",
+  "version": 1,
+  "prompt_template": "builders/threads.txt",
+  "story_point_limit": 3,
+  "character_limit": 500,
+  "visual_mode_fallback": "brand_text_card_required",
+  "extra_hashtags": ["뉴스브리프"],
+  "notes": ["Threads용 확산 초안입니다."],
+  "inspiration_patterns": [
+    "첫 문단에서 이슈를 바로 잡는다.",
+    "중간 문단은 맥락보다 핵심 사실 2~3개를 짧게 준다.",
+    "마지막 문단은 검수 후 링크 공개 또는 후속 설명을 예고한다."
+  ]
+}

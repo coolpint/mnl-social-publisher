@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from .common import (
-    base_hashtags,
     build_post_draft,
+    base_hashtags,
+    load_platform_profile,
     padded_story_points,
     render_post_template,
     text_visual_mode,
@@ -12,23 +13,26 @@ from ..models import PlatformPostDraft, SocialPackage
 
 
 def build_x_draft(package: SocialPackage) -> PlatformPostDraft:
-    prompt_template = "builders/x.txt"
-    points = padded_story_points(package, limit=2)
-    visual_mode, _, _ = text_visual_mode(package, "text_only_link_post")
-    hashtags = base_hashtags(package)
+    profile = load_platform_profile("x")
+    prompt_template = profile.prompt_template
+    points = padded_story_points(package, limit=profile.story_point_limit)
+    visual_mode, _, _ = text_visual_mode(package, profile.visual_mode_fallback)
+    hashtags = base_hashtags(package, extra=profile.extra_hashtags)
     candidate = render_post_template(
         prompt_template,
         headline=package.article.headline,
         point_1=points[0],
         point_2=points[1],
     )
-    text = trim_text(candidate, 260)
+    text = trim_text(candidate, profile.character_limit)
     return build_post_draft(
         "x",
         package,
         text=text,
         hashtags=hashtags[:3],
         visual_mode=visual_mode,
+        profile_id=profile.profile_id,
+        profile_version=profile.version,
         prompt_template=prompt_template,
-        notes=["X용 짧은 확산 초안입니다. 링크는 게시 단계에서 붙일 수 있습니다."],
+        notes=profile.notes,
     )

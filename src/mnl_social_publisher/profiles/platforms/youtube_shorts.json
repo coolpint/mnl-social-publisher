@@ -1,0 +1,25 @@
+{
+  "platform": "youtube_shorts",
+  "profile_id": "youtube-shorts-news-context-v1",
+  "version": 1,
+  "script_prompt_template": "builders/youtube_script.txt",
+  "description_prompt_template": "builders/youtube_description.txt",
+  "story_point_limit": 3,
+  "title_limit": 90,
+  "title_suffix": " | 1분 요약",
+  "hook_suffix": ", 핵심만 빠르게 보겠습니다.",
+  "thumbnail_headline_limit": 34,
+  "thumbnail_subheadline_limit": 20,
+  "scene_labels": ["hook", "point_1", "point_2", "point_3", "context", "cta"],
+  "scene_durations": [5, 7, 7, 7, 8, 6],
+  "default_tags": ["머니앤로", "뉴스요약", "shorts"],
+  "visual_mode_fallback": "brand_kinetic_typography",
+  "visual_mode_with_assets": "brand_typography_plus_approved_stills",
+  "max_tags": 10,
+  "notes": ["숏츠 훅 -> 핵심 3포인트 -> 맥락 -> 검수 CTA 구조를 기본으로 사용합니다."],
+  "inspiration_patterns": [
+    "첫 3초 안에 제목형 훅을 둔다.",
+    "중간은 사실 2~3개를 빠르게 연결한다.",
+    "마지막은 맥락 또는 검수 전제를 짧게 정리한다."
+  ]
+}

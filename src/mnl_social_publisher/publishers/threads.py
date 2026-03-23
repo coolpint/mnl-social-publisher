@@ -14,6 +14,11 @@ def build_threads_publish_request(
         "source_canonical_url": draft["source_canonical_url"],
         "visual_mode": draft["visual_mode"],
         "approved_asset_paths": draft["approved_asset_paths"],
+        "profile": {
+            "id": draft.get("profile_id", ""),
+            "version": draft.get("profile_version", 0),
+        },
+        "prompt_template": draft.get("prompt_template", ""),
     }
     return PublishRequest(
         schema_version=1,

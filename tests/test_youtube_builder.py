@@ -39,6 +39,8 @@ class YouTubeBuilderTestCase(unittest.TestCase):
         self.assertIn("머니앤로", draft.tags)
         self.assertEqual(draft.script_prompt_template, "builders/youtube_script.txt")
         self.assertEqual(draft.description_prompt_template, "builders/youtube_description.txt")
+        self.assertEqual(draft.profile_id, "youtube-shorts-news-context-v1")
+        self.assertEqual(draft.profile_version, 1)
         self.assertEqual(len(draft.scenes), 6)
         self.assertGreater(draft.total_duration_seconds, 35)
         self.assertTrue(draft.thumbnail_headline)
@@ -121,6 +123,7 @@ class YouTubeBuilderTestCase(unittest.TestCase):
             request.payload["prompt_templates"]["script"],
             "builders/youtube_script.txt",
         )
+        self.assertEqual(request.payload["profile"]["id"], "youtube-shorts-news-context-v1")
 
 
 if __name__ == "__main__":

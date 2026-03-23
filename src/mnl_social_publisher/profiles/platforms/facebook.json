@@ -1,0 +1,16 @@
+{
+  "platform": "facebook",
+  "profile_id": "facebook-explainer-v1",
+  "version": 1,
+  "prompt_template": "builders/facebook.txt",
+  "story_point_limit": 3,
+  "character_limit": 1200,
+  "visual_mode_fallback": "brand_square_summary_card",
+  "extra_hashtags": ["이슈정리"],
+  "notes": ["Facebook용 설명형 포스트 초안입니다."],
+  "inspiration_patterns": [
+    "첫 줄은 제목, 이후는 첫째 둘째 셋째 구조로 설명한다.",
+    "공유형 독자를 고려해 맥락 문장을 조금 더 남긴다.",
+    "댓글 유도보다 이해 보조가 우선이다."
+  ]
+}

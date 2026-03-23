@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 
+from ..generation_profiles import TextGenerationProfile, load_text_generation_profile
 from ..prompt_templates import render_prompt_template
 from ..models import PlatformPostDraft, SocialPackage
 from ..platforms import get_platform_target
@@ -52,13 +53,15 @@ def _normalize_hashtag(raw: str) -> str:
 
 
 def base_hashtags(package: SocialPackage, extra: list[str] | None = None) -> list[str]:
-    values = [
-        "머니앤로",
-        package.article.section_name,
-        package.article.subsection_name,
-    ]
+    values = ["머니앤로"]
     if extra:
         values.extend(extra)
+    values.extend(
+        [
+            package.article.section_name,
+            package.article.subsection_name,
+        ]
+    )
 
     hashtags: list[str] = []
     for value in values:
@@ -99,6 +102,8 @@ def build_post_draft(
     text: str,
     hashtags: list[str],
     visual_mode: str,
+    profile_id: str = "",
+    profile_version: int = 0,
     prompt_template: str = "",
     notes: list[str] | None = None,
 ) -> PlatformPostDraft:
@@ -123,6 +128,8 @@ def build_post_draft(
         builder=target.builder,
         publisher=target.publisher,
         source_canonical_url=package.article.canonical_url,
+        profile_id=profile_id,
+        profile_version=profile_version,
         prompt_template=prompt_template,
         notes=all_notes,
     )
@@ -130,3 +137,7 @@ def build_post_draft(
 
 def render_post_template(template_name: str, **context: object) -> str:
     return render_prompt_template(template_name, **context).strip()
+
+
+def load_platform_profile(platform: str) -> TextGenerationProfile:
+    return load_text_generation_profile(platform)

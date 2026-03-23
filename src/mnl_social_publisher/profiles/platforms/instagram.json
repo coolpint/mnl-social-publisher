@@ -1,0 +1,16 @@
+{
+  "platform": "instagram",
+  "profile_id": "instagram-saveable-brief-v1",
+  "version": 1,
+  "prompt_template": "builders/instagram.txt",
+  "story_point_limit": 3,
+  "character_limit": 2200,
+  "visual_mode_fallback": "brand_reel_or_card_template_required",
+  "extra_hashtags": ["인사이트", "오늘의이슈"],
+  "notes": ["Instagram용 캡션 초안입니다."],
+  "inspiration_patterns": [
+    "저장해둘 가치가 있는 체크리스트형 문장으로 정리한다.",
+    "첫 줄에서 오늘의 포인트를 압축한다.",
+    "해시태그는 캡션 하단에만 모은다."
+  ]
+}

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from importlib.resources import files
+import os
+from pathlib import Path
 
 
 PROMPT_PACKAGE = "mnl_social_publisher.prompts"
@@ -22,6 +24,11 @@ def _normalize_context_value(value: object) -> str:
 
 
 def prompt_path(template_name: str):
+    override_root = _override_root()
+    if override_root is not None:
+        override_path = override_root / template_name
+        if override_path.exists():
+            return override_path
     parts = [part for part in template_name.replace("\\", "/").split("/") if part]
     return files(PROMPT_PACKAGE).joinpath(*parts)
 
@@ -39,3 +46,10 @@ def render_prompt_template(template_name: str, **context: object) -> str:
     while lines and not lines[-1]:
         lines.pop()
     return "\n".join(lines)
+
+
+def _override_root() -> Path | None:
+    raw = (os.getenv("MNL_SOCIAL_TEMPLATE_ROOT") or "").strip()
+    if not raw:
+        return None
+    return Path(raw)
