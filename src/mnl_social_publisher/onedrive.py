@@ -60,19 +60,17 @@ class OneDriveClient:
     def __init__(self, config: OneDriveConfig) -> None:
         self.config = config
         self._access_token: Optional[str] = None
+        self._approot_id: Optional[str] = None
+        self._children_cache: dict[str, list[dict[str, object]]] = {}
+        self._item_cache: dict[str, dict[str, object] | None] = {}
 
     def exists(self, remote_path: str) -> bool:
         return self.resolve_item(remote_path) is not None
 
     def list_children(self, remote_path: str) -> list[OneDriveEntry]:
         parent_id = self.get_approot_id() if not remote_path.strip("/") else self._resolve_folder_id(remote_path)
-        payload = self._graph_json(
-            "GET",
-            f"{GRAPH_BASE_URL}/drives/{quote(self.config.drive_id)}/items/{quote(parent_id)}/children"
-            "?$select=id,name,folder,file",
-        )
         entries: list[OneDriveEntry] = []
-        for item in payload.get("value", []):
+        for item in self._list_child_items(parent_id):
             name = str(item.get("name") or "")
             if not name:
                 continue
@@ -124,17 +122,29 @@ class OneDriveClient:
             include_bearer=True,
             expected_status=(200, 201),
         )
+        self._invalidate_path_cache(remote_path)
         return json.loads(raw.decode("utf-8")) if raw else {}
 
     def resolve_item(self, remote_path: str) -> dict[str, object] | None:
-        parts = _split_remote_path(remote_path)
+        normalized_path = _normalize_remote_path(remote_path)
+        parts = _split_remote_path(normalized_path)
         if not parts:
             return None
+        if normalized_path in self._item_cache:
+            return self._item_cache[normalized_path]
         parent_id = self.get_approot_id()
         item: dict[str, object] | None = None
+        current_parts: list[str] = []
         for index, part in enumerate(parts):
-            item = self._find_child_by_name(parent_id=parent_id, name=part)
+            current_parts.append(part)
+            current_path = "/".join(current_parts)
+            if current_path in self._item_cache:
+                item = self._item_cache[current_path]
+            else:
+                item = self._find_child_by_name(parent_id=parent_id, name=part)
+                self._item_cache[current_path] = item
             if item is None:
+                self._item_cache[normalized_path] = None
                 return None
             if index != len(parts) - 1:
                 if "folder" not in item:
@@ -150,6 +160,8 @@ class OneDriveClient:
         return parent_id
 
     def get_approot_id(self) -> str:
+        if self._approot_id:
+            return self._approot_id
         payload = self._graph_json(
             "GET",
             f"{GRAPH_BASE_URL}/drives/{quote(self.config.drive_id)}/special/approot",
@@ -157,7 +169,8 @@ class OneDriveClient:
         item_id = payload.get("id")
         if not item_id:
             raise OneDriveError("Could not resolve OneDrive approot id")
-        return str(item_id)
+        self._approot_id = str(item_id)
+        return self._approot_id
 
     def _resolve_folder_id(self, remote_path: str) -> str:
         item = self.resolve_item(remote_path)
@@ -190,18 +203,36 @@ class OneDriveClient:
         item_id = payload.get("id")
         if not item_id:
             raise OneDriveError(f"Failed to create OneDrive folder: {folder_name}")
+        self._children_cache.pop(parent_id, None)
+        self._item_cache.clear()
         return str(item_id)
 
     def _find_child_by_name(self, parent_id: str, name: str) -> dict[str, object] | None:
+        for item in self._list_child_items(parent_id):
+            if item.get("name") == name:
+                return item
+        return None
+
+    def _list_child_items(self, parent_id: str) -> list[dict[str, object]]:
+        if parent_id in self._children_cache:
+            return self._children_cache[parent_id]
         payload = self._graph_json(
             "GET",
             f"{GRAPH_BASE_URL}/drives/{quote(self.config.drive_id)}/items/{quote(parent_id)}/children"
             "?$select=id,name,folder,file",
         )
-        for item in payload.get("value", []):
-            if item.get("name") == name:
-                return item
-        return None
+        items = list(payload.get("value", []))
+        self._children_cache[parent_id] = items
+        return items
+
+    def _invalidate_path_cache(self, remote_path: str) -> None:
+        self._item_cache.clear()
+        parts = _split_remote_path(remote_path)
+        if parts:
+            parent_path = "/".join(parts[:-1])
+            parent = self.resolve_item(parent_path) if parent_path else {"id": self.get_approot_id()}
+            if parent is not None:
+                self._children_cache.pop(str(parent.get("id") or ""), None)
 
     def _graph_json(
         self,
@@ -302,3 +333,7 @@ def _clean_env_value(value: str) -> str:
 
 def _split_remote_path(remote_path: str) -> list[str]:
     return [part for part in str(remote_path).split("/") if part.strip("/")]
+
+
+def _normalize_remote_path(remote_path: str) -> str:
+    return "/".join(_split_remote_path(remote_path))
