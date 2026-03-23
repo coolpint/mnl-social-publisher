@@ -71,6 +71,34 @@ h1 { font-size: 40px; line-height: 1.02; margin-top: 10px; }
 h2 { font-size: 30px; margin-bottom: 10px; }
 h3 { font-size: 20px; margin-bottom: 10px; }
 .hero p { max-width: 760px; color: rgba(249, 245, 238, 0.82); }
+.stat-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 22px;
+}
+.stat-card {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 22px;
+  padding: 16px 18px;
+}
+.stat-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.68;
+}
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  margin-top: 8px;
+}
+.stat-note {
+  font-size: 13px;
+  margin-top: 6px;
+  color: rgba(249, 245, 238, 0.75);
+}
 .nav {
   display: flex;
   gap: 12px;
@@ -154,6 +182,56 @@ th, td {
 th { color: var(--muted); font-size: 13px; font-weight: 600; }
 tr:last-child td { border-bottom: none; }
 .stack { display: grid; gap: 12px; }
+.action-stack { display: grid; gap: 10px; margin-top: 16px; }
+.story-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+.story-item {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 12px 14px;
+  background: rgba(255,255,255,0.54);
+}
+.story-item strong {
+  display: block;
+  margin-bottom: 6px;
+}
+.anchor-nav {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+.anchor-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(31, 27, 22, 0.06);
+  text-decoration: none;
+  font-size: 13px;
+}
+.article-shell {
+  display: grid;
+  gap: 18px;
+}
+.section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.helper {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.muted-link {
+  color: var(--accent-2);
+  text-decoration: none;
+}
 .platform-card {
   border: 1px solid var(--line);
   border-radius: 18px;
@@ -199,6 +277,7 @@ form.stack { display: grid; gap: 10px; }
 @media (max-width: 980px) {
   .span-8, .span-6, .span-4 { grid-column: span 12; }
   h1 { font-size: 32px; }
+  .stat-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 """
 
@@ -385,15 +464,17 @@ class SocialDeskApp:
     def _dashboard_page(self, environ) -> str:
         query = self._query(environ)
         flash = query.get("flash", "")
+        batches = self.workspace.list_recent_batches()
         batch_cards = []
-        for batch in self.workspace.list_recent_batches():
+        for batch in batches:
             batch_cards.append(self._batch_card(batch))
 
         if not batch_cards:
             batch_cards.append("<div class='panel span-12 empty'>아직 읽을 수 있는 batch가 없습니다.</div>")
 
         config_panel = self._config_panel()
-        body = config_panel + "".join(batch_cards)
+        summary_panel = self._dashboard_summary_panel(batches)
+        body = summary_panel + config_panel + "".join(batch_cards)
         return self._layout("Dashboard", body, flash=flash)
 
     def _batch_page(self, environ) -> str:
@@ -416,6 +497,10 @@ class SocialDeskApp:
         batch = self.workspace.load_batch(relative_dir)
         package = self.workspace.load_package(relative_dir, package_id)
 
+        platform_nav = "".join(
+            f'<a class="anchor-link" href="#platform-{escape(platform)}">{escape(platform)}</a>'
+            for platform in supported_platforms()
+        )
         body = [
             f"""
             <div class="panel span-12">
@@ -431,6 +516,7 @@ class SocialDeskApp:
                 <a class="button ghost" href="/batch?{urlencode({'relative_dir': relative_dir})}">Back To Batch</a>
                 <a class="button ghost" href="{escape(package.article.canonical_url)}">Open Source</a>
               </div>
+              <div class="anchor-nav">{platform_nav}</div>
             </div>
             """,
             self._article_overview_card(relative_dir, package_id),
@@ -454,6 +540,42 @@ class SocialDeskApp:
           <div class="eyebrow">Active Roots</div>
           <h2>Workspace Wiring</h2>
           <div class="meta">{''.join(rows)}</div>
+        </div>
+        """
+
+    def _dashboard_summary_panel(self, batches) -> str:
+        latest = batches[0] if batches else None
+        article_total = sum(batch.article_count for batch in batches)
+        cards = [
+            ("Visible Batches", str(len(batches)), "현재 대시보드에 보이는 최근 batch 수"),
+            ("Queued Articles", str(article_total), "최근 batch 안의 기사 수 합계"),
+            (
+                "Latest Run",
+                "-" if latest is None else str(latest.run.id),
+                "가장 최근 exporter run id",
+            ),
+            (
+                "Latest Batch",
+                "-" if latest is None else latest.relative_dir.split("/")[-1],
+                "바로 열어볼 batch 이름",
+            ),
+        ]
+        markup = "".join(
+            f"""
+            <div class="stat-card">
+              <div class="stat-label">{escape(label)}</div>
+              <div class="stat-value">{escape(value)}</div>
+              <div class="stat-note">{escape(note)}</div>
+            </div>
+            """
+            for label, value, note in cards
+        )
+        return f"""
+        <div class="panel span-12">
+          <div class="eyebrow">Operator Snapshot</div>
+          <h2>Today&apos;s Desk</h2>
+          <p class="helper">먼저 최신 batch를 열고 review 생성 여부를 확인한 다음, 기사별 승인과 플랫폼별 queue 작업으로 넘어가면 됩니다.</p>
+          <div class="stat-strip">{markup}</div>
         </div>
         """
 
@@ -556,13 +678,20 @@ class SocialDeskApp:
         ]
         if self.workspace.has_review_root:
             action_forms.append(
-                f"""
-                <form class="inline" method="post" action="/actions/build-review-all">
-                  <input type="hidden" name="relative_dir" value="{escape(batch.relative_dir)}">
-                  <button type="submit">Build All Review Artifacts</button>
-                </form>
-                """
+                f'<a class="button secondary" href="/actions/build-review-all?{params}">Review Build</a>'
             )
+        story_items = "".join(
+            f"""
+            <div class="story-item">
+              <strong>{escape(package_ref.headline or package_ref.package_dir)}</strong>
+              <div class="meta">
+                <span>idxno {package_ref.article_idxno}</span>
+                <span>{escape(package_ref.change_type or 'updated')}</span>
+              </div>
+            </div>
+            """
+            for package_ref in batch.packages[:3]
+        )
         return f"""
         <div class="panel span-6">
           <div class="eyebrow">Batch</div>
@@ -572,8 +701,9 @@ class SocialDeskApp:
             <span>{batch.article_count} article(s)</span>
             <span>{escape(batch.exported_at)}</span>
           </div>
-          <p>review 결과물을 만들고, 승인된 콘텐츠만 outbox로 넘기는 운영 시작점입니다.</p>
-          <div class="nav">
+          <p class="helper">review 결과물을 만들고, 승인된 콘텐츠만 outbox로 넘기는 운영 시작점입니다.</p>
+          <div class="story-list">{story_items or "<div class='empty'>기사 미리보기가 없습니다.</div>"}</div>
+          <div class="action-stack">
             {''.join(action_forms)}
           </div>
         </div>
@@ -583,24 +713,13 @@ class SocialDeskApp:
         action_forms = []
         if self.workspace.has_review_root:
             action_forms.append(
-                f"""
-                <form class="inline" method="post" action="/actions/build-review-all">
-                  <input type="hidden" name="relative_dir" value="{escape(batch.relative_dir)}">
-                  <button class="primary" type="submit">Build All Review Artifacts</button>
-                </form>
-                """
+                f'<a class="button primary" href="/actions/build-review-all?{urlencode({"relative_dir": batch.relative_dir})}">Build All Review Artifacts</a>'
             )
         for platform in supported_platforms():
             if not self.workspace.has_review_root or not self.workspace.has_outbox_root:
                 continue
             action_forms.append(
-                f"""
-                <form class="inline" method="post" action="/actions/create-publish-requests">
-                  <input type="hidden" name="relative_dir" value="{escape(batch.relative_dir)}">
-                  <input type="hidden" name="platform" value="{escape(platform)}">
-                  <button type="submit">{escape(platform)} Queue Approved</button>
-                </form>
-                """
+                f'<a class="button ghost" href="/actions/create-publish-requests?{urlencode({"relative_dir": batch.relative_dir, "platform": platform})}">{escape(platform)} Queue Approved</a>'
             )
 
         return f"""
@@ -612,6 +731,7 @@ class SocialDeskApp:
             <span>mode {escape(batch.run.mode or 'daily')}</span>
             <span>{batch.article_count} article(s)</span>
           </div>
+          <p class="helper">먼저 review build를 확인하고, 기사별 승인 이후 필요한 플랫폼만 queue로 넘기면 됩니다.</p>
           <div class="nav">
             <a class="button ghost" href="/">Back</a>
             {''.join(action_forms)}
@@ -687,11 +807,15 @@ class SocialDeskApp:
         return f"""
         <div class="panel span-12">
           <div class="eyebrow">Operator Note</div>
-          <h2>Review Then Dispatch</h2>
-          <p>이 화면에서는 플랫폼별 산출물을 확인하고 승인/반려를 남깁니다. 승인된 플랫폼만 outbox request로 넘어갑니다.</p>
+          <div class="section-title">
+            <h2>Review Then Dispatch</h2>
+            <a class="muted-link" href="/actions/approve?{urlencode({'relative_dir': relative_dir, 'package_id': package_id})}">Approval Help</a>
+          </div>
+          <p class="helper">이 화면에서는 플랫폼별 산출물을 확인하고 승인/반려를 남깁니다. 승인된 플랫폼만 outbox request로 넘어갑니다.</p>
           <div class="meta">
             <span>relative_dir: {escape(relative_dir)}</span>
             <span>package: {escape(package_id)}</span>
+            <span>flow: review -> approval -> queue</span>
           </div>
         </div>
         """
@@ -731,7 +855,7 @@ class SocialDeskApp:
             )
 
         return f"""
-        <div class="panel span-6">
+        <div class="panel span-6" id="platform-{escape(platform)}">
           <div class="eyebrow">{escape(platform)}</div>
           <h3>{escape(package.article.headline)}</h3>
           <div class="meta">

@@ -113,7 +113,7 @@ class WebAppTestCase(unittest.TestCase):
             self.assertTrue(response["status"].startswith("200"))
             self.assertIn("Money & Law Social Desk", body)
             self.assertIn("run-000123", body)
-            self.assertIn("Build All Review Artifacts", body)
+            self.assertIn("Review Build", body)
             self.assertIn("Approval Input: web_form", body)
             self.assertIn("Approval Store: local_json", body)
 
