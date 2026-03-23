@@ -43,9 +43,11 @@ class RemoteJsonApprovalStore:
 
     def read_approval(self, relative_dir: str, package_id: str) -> dict | None:
         remote_path = _join_remote(self.approval_root, relative_dir, f"{package_id}.json")
-        if not self.client.exists(remote_path):
+        try:
+            payload = self.client.read_bytes(remote_path)
+        except Exception:
             return None
-        return json.loads(self.client.read_bytes(remote_path).decode("utf-8"))
+        return json.loads(payload.decode("utf-8"))
 
     def save_submission(self, submission: ApprovalSubmission) -> str:
         remote_path = _join_remote(

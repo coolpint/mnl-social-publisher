@@ -120,6 +120,38 @@ class RemoteWorkspaceTestCase(unittest.TestCase):
         self.assertEqual(batches[0].relative_dir, "2026/03/14/run-000123")
         self.assertEqual(client.read_calls, ["social/inbox/2026/03/14/run-000123/batch.json"])
 
+    def test_remote_web_pages_work_with_preview_files_only(self) -> None:
+        workspace = self._build_workspace()
+        client = workspace._fake_client  # type: ignore[attr-defined]
+        client.files = {
+            path: payload
+            for path, payload in client.files.items()
+            if path.endswith(("batch.json", "package.json", "article.json", "rights.json"))
+        }
+        app = create_web_app(Settings(), workspace=workspace)
+
+        response, batch_body = _invoke(
+            app,
+            "GET",
+            "/batch",
+            query={"relative_dir": "2026/03/14/run-000123"},
+        )
+        self.assertTrue(response["status"].startswith("200"))
+        self.assertIn("Review Queue", batch_body)
+
+        response, article_body = _invoke(
+            app,
+            "GET",
+            "/article",
+            query={
+                "relative_dir": "2026/03/14/run-000123",
+                "package_id": "article-000143",
+            },
+        )
+        self.assertTrue(response["status"].startswith("200"))
+        self.assertIn("Article Review", article_body)
+        self.assertFalse(any(path.endswith(("source.html", "body.txt", "article.xml")) for path in client.read_calls))
+
     def test_remote_workspace_builds_review_and_publish_requests(self) -> None:
         workspace = self._build_workspace()
         summary = workspace.build_review_all("2026/03/14/run-000123")

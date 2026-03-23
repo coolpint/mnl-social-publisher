@@ -316,16 +316,22 @@ class RemoteWorkspace(BaseWorkspace):
 
     def load_package(self, relative_dir: str, package_id: str) -> SocialPackage:
         with tempfile.TemporaryDirectory(prefix="mnl-social-remote-package-") as temp_dir:
-            batch_root = self._hydrate_batch(relative_dir, Path(temp_dir), package_ids={package_id})
+            batch_root = self._hydrate_batch(
+                relative_dir,
+                Path(temp_dir),
+                package_ids={package_id},
+                lightweight_packages=True,
+            )
             return load_package(batch_root / package_id)
 
     def read_review_artifact(self, relative_dir: str, package_id: str, artifact_name: str) -> str | None:
         if not self.review_root:
             return None
         remote_path = _join_remote(self.review_root, relative_dir, package_id, artifact_name)
-        if not self.client.exists(remote_path):
+        payload = self._read_remote_bytes_if_exists(remote_path)
+        if payload is None:
             return None
-        return self.client.read_bytes(remote_path).decode("utf-8")
+        return payload.decode("utf-8")
 
     def read_batch_status(self, batch: SocialBatch, platform: str) -> dict | None:
         if not self.status_root:
@@ -456,6 +462,7 @@ class RemoteWorkspace(BaseWorkspace):
         relative_dir: str,
         destination_root: Path,
         package_ids: set[str] | None = None,
+        lightweight_packages: bool = False,
     ) -> Path:
         batch_root = destination_root / relative_dir
         batch_root.mkdir(parents=True, exist_ok=True)
@@ -467,7 +474,12 @@ class RemoteWorkspace(BaseWorkspace):
                 continue
             if package_ids is not None and package_id not in package_ids:
                 continue
-            self._hydrate_package(relative_dir, package_id, batch_root / package_id)
+            self._hydrate_package(
+                relative_dir,
+                package_id,
+                batch_root / package_id,
+                lightweight=lightweight_packages,
+            )
         return batch_root
 
     def _load_remote_batch_manifest(self, relative_dir: str) -> SocialBatch:
@@ -475,21 +487,32 @@ class RemoteWorkspace(BaseWorkspace):
         payload = json.loads(self.client.read_bytes(remote_path).decode("utf-8"))
         return load_batch_from_payload(payload, Path(relative_dir))
 
-    def _hydrate_package(self, relative_dir: str, package_id: str, package_root: Path) -> None:
+    def _hydrate_package(
+        self,
+        relative_dir: str,
+        package_id: str,
+        package_root: Path,
+        *,
+        lightweight: bool = False,
+    ) -> None:
         package_root.mkdir(parents=True, exist_ok=True)
         package_payload = self._download_json(
             _join_remote(self.inbox_root, relative_dir, package_id, "package.json"),
             package_root / "package.json",
         )
         file_refs = dict(package_payload.get("files", {}))
+        remote_required = {"article_json", "rights"}
         for key in ("article_json", "article_xml", "source_html", "body_text", "rights"):
             relative_name = str(file_refs.get(key) or "")
             if not relative_name:
                 continue
-            remote_path = _join_remote(self.inbox_root, relative_dir, package_id, relative_name)
             local_path = package_root / relative_name
-            payload = self.client.read_bytes(remote_path)
             local_path.parent.mkdir(parents=True, exist_ok=True)
+            if lightweight and key not in remote_required:
+                local_path.write_text("", encoding="utf-8")
+                continue
+            remote_path = _join_remote(self.inbox_root, relative_dir, package_id, relative_name)
+            payload = self.client.read_bytes(remote_path)
             local_path.write_bytes(payload)
         assets_dir_rel = str(package_payload.get("assets", {}).get("directory") or "assets")
         (package_root / assets_dir_rel).mkdir(parents=True, exist_ok=True)
@@ -531,9 +554,16 @@ class RemoteWorkspace(BaseWorkspace):
         return json.loads(payload.decode("utf-8"))
 
     def _read_remote_json_if_exists(self, remote_path: str) -> dict | None:
-        if not self.client.exists(remote_path):
+        payload = self._read_remote_bytes_if_exists(remote_path)
+        if payload is None:
             return None
-        return json.loads(self.client.read_bytes(remote_path).decode("utf-8"))
+        return json.loads(payload.decode("utf-8"))
+
+    def _read_remote_bytes_if_exists(self, remote_path: str) -> bytes | None:
+        try:
+            return self.client.read_bytes(remote_path)
+        except Exception:
+            return None
 
 
 def workspace_from_settings(

@@ -430,7 +430,7 @@ class SocialDeskApp:
             self._article_overview_card(relative_dir, package_id),
         ]
         for platform in supported_platforms():
-            body.append(self._platform_review_card(batch, package_id, platform))
+            body.append(self._platform_review_card(batch, package, platform))
         return self._layout(package.article.headline, "".join(body), current="article", flash=flash)
 
     def _config_panel(self) -> str:
@@ -524,17 +524,26 @@ class SocialDeskApp:
     def _batch_articles_table(self, batch) -> str:
         rows = []
         for package_ref in batch.packages:
-            package = self.workspace.load_package(batch.relative_dir, package_ref.package_dir)
-            params = urlencode({"relative_dir": batch.relative_dir, "package_id": package.package_id})
+            try:
+                package = self.workspace.load_package(batch.relative_dir, package_ref.package_dir)
+                package_id = package.package_id
+                headline = package.article.headline
+                section_name = package.article.section_name or "-"
+            except Exception:
+                package = None
+                package_id = package_ref.package_dir
+                headline = package_ref.headline or package_ref.package_dir
+                section_name = "-"
+            params = urlencode({"relative_dir": batch.relative_dir, "package_id": package_id})
             status_chips = "".join(
-                self._status_chip_for_batch_article(batch, package, platform)
+                self._status_chip_for_batch_article(batch, package, package_ref, platform)
                 for platform in supported_platforms()
             )
             rows.append(
                 f"""
                 <tr>
-                  <td><a href="/article?{params}">{escape(package.article.headline)}</a></td>
-                  <td>{escape(package.article.section_name or '-')}</td>
+                  <td><a href="/article?{params}">{escape(headline)}</a></td>
+                  <td>{escape(section_name)}</td>
                   <td>{status_chips}</td>
                 </tr>
                 """
@@ -589,8 +598,7 @@ class SocialDeskApp:
         </div>
         """
 
-    def _platform_review_card(self, batch, package_id: str, platform: str) -> str:
-        package = self.workspace.load_package(batch.relative_dir, package_id)
+    def _platform_review_card(self, batch, package, platform: str) -> str:
         approval_payload = self.workspace.read_approval(batch.relative_dir, package.package_id)
         decision = None if approval_payload is None else approval_payload.get("platforms", {}).get(platform)
         status_payload = self.workspace.read_article_status(batch, package, platform)
@@ -639,8 +647,11 @@ class SocialDeskApp:
         </div>
         """
 
-    def _status_chip_for_batch_article(self, batch, package, platform: str) -> str:
-        status_payload = self.workspace.read_article_status(batch, package, platform)
+    def _status_chip_for_batch_article(self, batch, package, package_ref, platform: str) -> str:
+        if package is None:
+            status_payload = None
+        else:
+            status_payload = self.workspace.read_article_status(batch, package, platform)
         if status_payload is None:
             return f"<span class='chip'>{escape(platform)}: idle</span>"
         state = str(status_payload.get("state") or "unknown")
