@@ -17,6 +17,11 @@ if [[ -z "$DOCKER_BIN" ]]; then
   exit 1
 fi
 
+case ":$PATH:" in
+  *:/Applications/Docker.app/Contents/Resources/bin:*) ;;
+  *) export PATH="/Applications/Docker.app/Contents/Resources/bin:$PATH" ;;
+esac
+
 if [[ ! -f "$ENV_FILE" ]]; then
   echo "Missing env file: $ENV_FILE"
   exit 1
