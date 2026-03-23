@@ -250,6 +250,12 @@ class SocialDeskApp:
                 return self._html_response(start_response, self._batch_page(environ))
             if method == "GET" and path == "/article":
                 return self._html_response(start_response, self._article_page(environ))
+            if method == "GET" and path == "/actions/build-review-all":
+                return self._html_response(start_response, self._build_review_all_confirm_page(environ))
+            if method == "GET" and path == "/actions/create-publish-requests":
+                return self._html_response(start_response, self._create_publish_requests_confirm_page(environ))
+            if method == "GET" and path == "/actions/approve":
+                return self._html_response(start_response, self._approval_action_help_page(environ))
             if method == "POST" and path == "/actions/build-review-all":
                 return self._handle_build_review_all(environ, start_response)
             if method == "POST" and path == "/actions/approve":
@@ -450,6 +456,98 @@ class SocialDeskApp:
           <div class="meta">{''.join(rows)}</div>
         </div>
         """
+
+    def _build_review_all_confirm_page(self, environ) -> str:
+        query = self._query(environ)
+        relative_dir = query.get("relative_dir", "")
+        if not relative_dir:
+            body = """
+            <div class="panel span-12">
+              <div class="eyebrow">Action Help</div>
+              <h2>Build Review All</h2>
+              <p>이 주소는 batch에서 review 산출물을 생성하는 작업용 경로입니다. 직접 URL만 열기보다 대시보드에서 batch를 연 뒤 버튼을 누르는 방식이 맞습니다.</p>
+              <div class="nav">
+                <a class="button primary" href="/">Go To Dashboard</a>
+              </div>
+            </div>
+            """
+            return self._layout("Build Review All", body, current="action")
+
+        body = f"""
+        <div class="panel span-12">
+          <div class="eyebrow">Action Confirm</div>
+          <h2>Build Review Artifacts</h2>
+          <p><strong>{escape(relative_dir)}</strong> batch의 플랫폼별 review 산출물을 다시 생성합니다.</p>
+          <div class="nav">
+            <a class="button ghost" href="/batch?{urlencode({'relative_dir': relative_dir})}">Back To Batch</a>
+          </div>
+        </div>
+        <div class="panel span-12">
+          <form class="stack" method="post" action="/actions/build-review-all">
+            <input type="hidden" name="relative_dir" value="{escape(relative_dir)}">
+            <button class="primary" type="submit">Start Build Review All</button>
+          </form>
+        </div>
+        """
+        return self._layout("Build Review All", body, current="action")
+
+    def _create_publish_requests_confirm_page(self, environ) -> str:
+        query = self._query(environ)
+        relative_dir = query.get("relative_dir", "")
+        platform = query.get("platform", "")
+        if not relative_dir or not platform:
+            body = """
+            <div class="panel span-12">
+              <div class="eyebrow">Action Help</div>
+              <h2>Queue Approved</h2>
+              <p>이 주소는 승인된 콘텐츠를 platform outbox로 넘기는 작업용 경로입니다. batch 화면에서 플랫폼 버튼을 눌러 실행하는 방식이 맞습니다.</p>
+              <div class="nav">
+                <a class="button primary" href="/">Go To Dashboard</a>
+              </div>
+            </div>
+            """
+            return self._layout("Queue Approved", body, current="action")
+
+        body = f"""
+        <div class="panel span-12">
+          <div class="eyebrow">Action Confirm</div>
+          <h2>Queue Approved For {escape(platform)}</h2>
+          <p><strong>{escape(relative_dir)}</strong> batch에서 승인된 <strong>{escape(platform)}</strong> 요청만 outbox로 보냅니다.</p>
+          <div class="nav">
+            <a class="button ghost" href="/batch?{urlencode({'relative_dir': relative_dir})}">Back To Batch</a>
+          </div>
+        </div>
+        <div class="panel span-12">
+          <form class="stack" method="post" action="/actions/create-publish-requests">
+            <input type="hidden" name="relative_dir" value="{escape(relative_dir)}">
+            <input type="hidden" name="platform" value="{escape(platform)}">
+            <button class="primary" type="submit">Queue Approved Requests</button>
+          </form>
+        </div>
+        """
+        return self._layout("Queue Approved", body, current="action")
+
+    def _approval_action_help_page(self, environ) -> str:
+        query = self._query(environ)
+        relative_dir = query.get("relative_dir", "")
+        package_id = query.get("package_id", "")
+        params = {}
+        if relative_dir:
+            params["relative_dir"] = relative_dir
+        if package_id:
+            params["package_id"] = package_id
+        target = f"/article?{urlencode(params)}" if params else "/"
+        body = f"""
+        <div class="panel span-12">
+          <div class="eyebrow">Action Help</div>
+          <h2>Approval Uses A Form</h2>
+          <p>승인은 직접 URL로 여는 액션이 아니라 기사 상세 화면의 승인 폼으로 처리합니다.</p>
+          <div class="nav">
+            <a class="button primary" href="{escape(target)}">Go To Review Screen</a>
+          </div>
+        </div>
+        """
+        return self._layout("Approval Help", body, current="action")
 
     def _batch_card(self, batch) -> str:
         params = urlencode({"relative_dir": batch.relative_dir})

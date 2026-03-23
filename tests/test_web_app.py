@@ -149,6 +149,37 @@ class WebAppTestCase(unittest.TestCase):
                 ).exists()
             )
 
+    def test_get_build_review_all_action_shows_confirm_page(self) -> None:
+        with tempfile.TemporaryDirectory() as review_dir, tempfile.TemporaryDirectory() as approval_dir, tempfile.TemporaryDirectory() as outbox_dir, tempfile.TemporaryDirectory() as status_dir:
+            app = create_web_app(
+                Settings(
+                    inbox_root=FIXTURE_INBOX_ROOT,
+                    review_root=Path(review_dir),
+                    approval_root=Path(approval_dir),
+                    outbox_root=Path(outbox_dir),
+                    status_root=Path(status_dir),
+                )
+            )
+            response, body = _invoke(
+                app,
+                "GET",
+                "/actions/build-review-all",
+                query={"relative_dir": "2026/03/14/run-000123"},
+            )
+
+            self.assertTrue(response["status"].startswith("200"))
+            self.assertIn("Build Review Artifacts", body)
+            self.assertIn("Start Build Review All", body)
+
+    def test_get_action_without_required_params_shows_help(self) -> None:
+        app = create_web_app(Settings(inbox_root=FIXTURE_INBOX_ROOT))
+
+        response, body = _invoke(app, "GET", "/actions/create-publish-requests")
+
+        self.assertTrue(response["status"].startswith("200"))
+        self.assertIn("Queue Approved", body)
+        self.assertIn("Go To Dashboard", body)
+
     def test_approve_and_queue_publish_request_from_browser_flow(self) -> None:
         with tempfile.TemporaryDirectory() as review_dir, tempfile.TemporaryDirectory() as approval_dir, tempfile.TemporaryDirectory() as outbox_dir, tempfile.TemporaryDirectory() as status_dir:
             app = create_web_app(
