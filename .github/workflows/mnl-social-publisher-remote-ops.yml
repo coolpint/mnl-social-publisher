@@ -126,9 +126,12 @@ jobs:
             fi
             echo "- Platform: \`${{ inputs.platform }}\`"
             echo "- Notify: \`${{ inputs.notify }}\`"
-            echo "- Remote inbox root: \`social/inbox\`"
-            echo "- Remote review root: \`social/review\`"
-            echo "- Remote outbox root: \`social/outbox\`"
+            echo "- Graph app-folder relative inbox root: \`social/inbox\`"
+            echo "- Graph app-folder relative review root: \`social/review\`"
+            echo "- Graph app-folder relative outbox root: \`social/outbox\`"
+            echo "- SharePoint-visible inbox path: \`Apps/mnl-backup-prod/social/inbox/\`"
+            echo "- SharePoint-visible review path: \`Apps/mnl-backup-prod/social/review/\`"
+            echo "- SharePoint-visible outbox path: \`Apps/mnl-backup-prod/social/outbox/\`"
             echo
             echo '```json'
             cat result.json

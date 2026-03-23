@@ -171,6 +171,8 @@ PYTHONPATH=src python3 -m mnl_social_publisher serve-web --host 0.0.0.0 --port 8
 
 In `onedrive` mode the app reads `social/inbox`, writes `social/review`, `social/approval`, `social/outbox`, and `social/status` back to Microsoft Graph directly. A local SharePoint/OneDrive sync folder is not required. The current implementation stages files only in a temporary runtime workspace while each request is being processed; the system of record remains the remote drive.
 
+Those remote roots are Graph app-folder relative paths. In SharePoint they typically appear under a visible path like `Apps/mnl-backup-prod/social/inbox`, `Apps/mnl-backup-prod/social/review`, and so on.
+
 ## Prompt and storyboard outputs
 
 - Text builders use prompt templates in `src/mnl_social_publisher/prompts/builders/`.

@@ -180,6 +180,10 @@ def _resolve_workspace_relative_dir(workspace, requested_relative_dir: str | Non
     return batches[0].relative_dir
 
 
+def _workspace_roots_payload(workspace) -> list[dict[str, str]]:
+    return [{"label": label, "value": value} for label, value in workspace.describe_roots()]
+
+
 def main(argv: list[str] | None = None) -> int:
     settings = Settings.from_env()
     parser = _build_parser()
@@ -231,6 +235,7 @@ def main(argv: list[str] | None = None) -> int:
         payload = {
             "schema_version": 1,
             "workspace_kind": settings.storage_backend,
+            "roots": _workspace_roots_payload(workspace),
             "batch_count": 0,
             "batches": [],
         }
@@ -251,6 +256,7 @@ def main(argv: list[str] | None = None) -> int:
         workspace = workspace_from_settings(settings)
         relative_dir = _resolve_workspace_relative_dir(workspace, args.relative_dir, args.latest)
         summary = workspace.build_review_all(relative_dir)
+        summary["roots"] = _workspace_roots_payload(workspace)
         if args.notify:
             summary["notification"] = notify_operation_result("build_review_all", summary, settings)
         print(_dump_json(summary, pretty=args.pretty))
@@ -260,6 +266,7 @@ def main(argv: list[str] | None = None) -> int:
         workspace = workspace_from_settings(settings)
         relative_dir = _resolve_workspace_relative_dir(workspace, args.relative_dir, args.latest)
         summary = workspace.create_publish_requests(relative_dir, args.platform)
+        summary["roots"] = _workspace_roots_payload(workspace)
         if args.notify:
             summary["notification"] = notify_operation_result(
                 "queue_publish_requests",

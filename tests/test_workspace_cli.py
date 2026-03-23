@@ -11,6 +11,9 @@ class FakeWorkspace:
         self.last_publish_relative_dir = ""
         self.last_publish_platform = ""
 
+    def describe_roots(self):
+        return [("Mode", "fake"), ("Inbox", "social/inbox")]
+
     def list_recent_batches(self, limit: int = 10):
         return [
             SocialBatch(
@@ -65,6 +68,7 @@ class WorkspaceCliTestCase(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         rendered = mocked_print.call_args[0][0]
         self.assertIn("2026/03/22/run-000321", rendered)
+        self.assertIn("social/inbox", rendered)
 
     def test_workspace_build_review_all_defaults_to_latest_batch(self) -> None:
         workspace = FakeWorkspace()
