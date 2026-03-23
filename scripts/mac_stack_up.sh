@@ -27,8 +27,7 @@ if ! docker info >/dev/null 2>&1; then
 fi
 
 cd "$REPO_ROOT"
-docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" pull
-docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d
+docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d --build
 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" ps
 
 echo

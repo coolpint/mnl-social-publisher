@@ -22,24 +22,14 @@ Install:
 - Tailscale
 - Git
 
-Then clone the repo to a stable path, for example:
+Then put the repo on the Mac in a stable path, for example:
 
 ```bash
 git clone git@github.com:coolpint/mnl-social-publisher.git
 cd mnl-social-publisher
 ```
 
-## 2. Authenticate to GHCR
-
-If the package is private, log in first:
-
-```bash
-docker login ghcr.io
-```
-
-Use a GitHub account that can read the package.
-
-## 3. Create the env file
+## 2. Create the env file
 
 ```bash
 cp deploy/mnl-social-publisher.env.example deploy/mnl-social-publisher.env
@@ -62,7 +52,9 @@ The default remote roots already point to:
 - `social/outbox`
 - `social/status`
 
-## 4. Start the stack
+The default image value is a local tag. `./scripts/mac_stack_up.sh` builds from the local Dockerfile, so a GHCR login is not required for the first deployment.
+
+## 3. Start the stack
 
 ```bash
 ./scripts/mac_stack_up.sh
@@ -80,7 +72,7 @@ Expected response:
 ok
 ```
 
-## 5. Install auto-start on the Mac
+## 4. Install auto-start on the Mac
 
 ```bash
 ./scripts/install_mac_launch_agent.sh
@@ -100,7 +92,7 @@ Useful commands:
 ./scripts/mac_stack_down.sh
 ```
 
-## 6. Expose it through Tailscale only
+## 5. Expose it through Tailscale only
 
 Once the app works locally, publish it inside the tailnet:
 
@@ -115,7 +107,7 @@ Then check:
 
 Open the served URL from another device that is already inside the same tailnet.
 
-## 7. First operator smoke test
+## 6. First operator smoke test
 
 1. open the dashboard through Tailscale
 2. sign in with the Basic Auth credentials

@@ -1,6 +1,9 @@
 services:
   social-desk:
     image: ${MNL_SOCIAL_IMAGE:-ghcr.io/coolpint/mnl-social-publisher:main}
+    build:
+      context: ..
+      dockerfile: Dockerfile
     container_name: mnl-social-publisher
     restart: unless-stopped
     ports:
