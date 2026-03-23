@@ -90,6 +90,7 @@ Useful commands:
 ./scripts/uninstall_mac_launch_agent.sh
 ./scripts/mac_stack_logs.sh
 ./scripts/mac_stack_down.sh
+./scripts/mac_enable_tailscale_serve.sh
 ```
 
 ## 5. Expose it through Tailscale only
@@ -97,7 +98,7 @@ Useful commands:
 Once the app works locally, publish it inside the tailnet:
 
 ```bash
-tailscale serve --bg 8420
+./scripts/mac_enable_tailscale_serve.sh
 ```
 
 Then check:
