@@ -278,3 +278,4 @@ Required runtime environment for the remote app:
 The image workflow publishes to `ghcr.io/<owner>/mnl-social-publisher`. A hosting platform only needs to run that image with the environment above.
 
 See [docs/REMOTE_WEB_UI.md](docs/REMOTE_WEB_UI.md) for the rollout checklist.
+If the first production host is a Mac on your Tailscale network, use [docs/MAC_DOCKER_DEPLOYMENT.md](docs/MAC_DOCKER_DEPLOYMENT.md).

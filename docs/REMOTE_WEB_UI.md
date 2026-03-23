@@ -2,6 +2,8 @@
 
 This document is the shortest path to turning `mnl-social-publisher` into an always-on operator app.
 
+If the first host will be a Mac mini or MacBook inside your Tailscale network, start with [docs/MAC_DOCKER_DEPLOYMENT.md](docs/MAC_DOCKER_DEPLOYMENT.md).
+
 ## Goal
 
 Run the browser UI remotely so editors can:

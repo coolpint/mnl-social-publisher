@@ -5,3 +5,5 @@ dist/
 build/
 *.pyc
 .runtime/
+deploy/mnl-social-publisher.env
+deploy/logs/
