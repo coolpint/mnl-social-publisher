@@ -86,8 +86,9 @@ ok
 This does three things:
 
 - generates a user-level `launchd` plist
-- starts the stack on login
-- retries every 5 minutes in case Docker was not ready at first
+- starts the stack once on login
+- resumes the existing Docker stack without rebuilding it
+- waits for Docker Desktop or OrbStack to become ready before giving up
 
 Useful commands:
 
@@ -95,6 +96,7 @@ Useful commands:
 ./scripts/uninstall_mac_launch_agent.sh
 ./scripts/mac_stack_logs.sh
 ./scripts/mac_stack_down.sh
+./scripts/mac_stack_resume.sh
 ./scripts/mac_enable_tailscale_serve.sh
 ```
 
@@ -129,4 +131,5 @@ Open the served URL from another device that is already inside the same tailnet.
 - if you set `MNL_SOCIAL_BIND_HOST=0.0.0.0`, devices on the same local network can open `http://<mac-ip>:8420`
 - Tailscale is still the cleaner long-term access path when you want access outside the local network
 - `restart: unless-stopped` keeps the container running after Docker restarts
-- `launchd` makes sure the stack comes back after Mac login or reboot
+- `launchd` here is a user `LaunchAgent`, so it runs after user login, not before login at pure boot time
+- `./scripts/mac_stack_up.sh` is still the manual command for rebuilds after code changes
