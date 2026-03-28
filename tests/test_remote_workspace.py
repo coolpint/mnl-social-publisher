@@ -17,6 +17,8 @@ class FakeRemoteClient:
     def __init__(self) -> None:
         self.files: dict[str, bytes] = {}
         self.read_calls: list[str] = []
+        self.clear_cache_calls = 0
+        self._children_cache: dict[str, list["FakeEntry"]] = {}
 
     def exists(self, remote_path: str) -> bool:
         remote_path = _clean(remote_path)
@@ -27,6 +29,8 @@ class FakeRemoteClient:
 
     def list_children(self, remote_path: str):
         remote_path = _clean(remote_path)
+        if remote_path in self._children_cache:
+            return list(self._children_cache[remote_path])
         prefix = f"{remote_path}/" if remote_path else ""
         seen: dict[str, bool] = {}
         for path in self.files:
@@ -38,7 +42,9 @@ class FakeRemoteClient:
             head, _, tail = remainder.partition("/")
             is_folder = bool(tail)
             seen[head] = seen.get(head, False) or is_folder
-        return [FakeEntry(name=name, is_folder=is_folder) for name, is_folder in seen.items()]
+        entries = [FakeEntry(name=name, is_folder=is_folder) for name, is_folder in seen.items()]
+        self._children_cache[remote_path] = list(entries)
+        return entries
 
     def read_bytes(self, remote_path: str) -> bytes:
         cleaned = _clean(remote_path)
@@ -48,6 +54,10 @@ class FakeRemoteClient:
     def write_bytes(self, remote_path: str, data: bytes) -> dict[str, object]:
         self.files[_clean(remote_path)] = data
         return {"name": Path(remote_path).name}
+
+    def clear_cache(self) -> None:
+        self.clear_cache_calls += 1
+        self._children_cache.clear()
 
 
 class FakeEntry:
@@ -119,6 +129,54 @@ class RemoteWorkspaceTestCase(unittest.TestCase):
         self.assertEqual(len(batches), 1)
         self.assertEqual(batches[0].relative_dir, "2026/03/14/run-000123")
         self.assertEqual(client.read_calls, ["social/inbox/2026/03/14/run-000123/batch.json"])
+
+    def test_remote_workspace_prefers_latest_kst_relative_dir(self) -> None:
+        workspace = self._build_workspace()
+        client = workspace._fake_client  # type: ignore[attr-defined]
+        client.files = {
+            path: payload
+            for path, payload in client.files.items()
+            if path.endswith("batch.json")
+        }
+        latest_payload = json.loads(next(iter(client.files.values())).decode("utf-8"))
+        latest_payload["relative_dir"] = "2026/03/26/run-000124"
+        latest_payload["exported_at"] = "2026-03-26T06:55:43+09:00"
+        latest_payload["run"]["id"] = 124
+        client.write_bytes(
+            "social/inbox/2026/03/26/run-000124/batch.json",
+            json.dumps(latest_payload, ensure_ascii=False).encode("utf-8"),
+        )
+
+        batches = workspace.list_recent_batches(limit=1)
+
+        self.assertEqual(len(batches), 1)
+        self.assertEqual(batches[0].relative_dir, "2026/03/26/run-000124")
+
+    def test_remote_workspace_refreshes_cached_inbox_listing(self) -> None:
+        workspace = self._build_workspace()
+        client = workspace._fake_client  # type: ignore[attr-defined]
+        client.files = {
+            path: payload
+            for path, payload in client.files.items()
+            if path.endswith("batch.json")
+        }
+
+        first_batches = workspace.list_recent_batches(limit=1)
+        self.assertEqual(first_batches[0].relative_dir, "2026/03/14/run-000123")
+
+        latest_payload = json.loads(next(iter(client.files.values())).decode("utf-8"))
+        latest_payload["relative_dir"] = "2026/03/28/run-000130"
+        latest_payload["exported_at"] = "2026-03-28T07:05:00+09:00"
+        latest_payload["run"]["id"] = 130
+        client.write_bytes(
+            "social/inbox/2026/03/28/run-000130/batch.json",
+            json.dumps(latest_payload, ensure_ascii=False).encode("utf-8"),
+        )
+
+        second_batches = workspace.list_recent_batches(limit=1)
+
+        self.assertEqual(second_batches[0].relative_dir, "2026/03/28/run-000130")
+        self.assertGreaterEqual(client.clear_cache_calls, 2)
 
     def test_remote_web_pages_work_with_preview_files_only(self) -> None:
         workspace = self._build_workspace()

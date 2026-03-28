@@ -64,6 +64,10 @@ class OneDriveClient:
         self._children_cache: dict[str, list[dict[str, object]]] = {}
         self._item_cache: dict[str, dict[str, object] | None] = {}
 
+    def clear_cache(self) -> None:
+        self._children_cache.clear()
+        self._item_cache.clear()
+
     def exists(self, remote_path: str) -> bool:
         return self.resolve_item(remote_path) is not None
 

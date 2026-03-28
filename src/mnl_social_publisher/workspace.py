@@ -302,6 +302,7 @@ class RemoteWorkspace(BaseWorkspace):
         ]
 
     def list_recent_batches(self, limit: int = 24) -> list[SocialBatch]:
+        self.client.clear_cache()
         relative_dirs = self._list_recent_relative_dirs(limit=limit)
         batches: list[SocialBatch] = []
         for relative_dir in relative_dirs:
